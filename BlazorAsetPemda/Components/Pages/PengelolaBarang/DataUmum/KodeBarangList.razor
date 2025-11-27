@@ -1,0 +1,459 @@
+@page "/pengelola-barang/data-umum/kode-barang"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+@inject KodeBarangService KodeBarangService
+@inject IJSRuntime JS
+@using BlazorAsetPemda.Data.Enums
+
+<PageTitle>Kode Barang - Data Umum</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 mb-0">Data Kode Barang</h1>
+            <p class="text-muted">Master Kode Barang</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="OpenAddModal">
+                <i class="bi bi-plus-circle"></i> Tambah Kode Barang
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Cari</label>
+                    <input type="text" class="form-control" placeholder="Kode, Nama Barang..."
+                           @bind="SearchTerm" @bind:event="oninput" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tipe KIB</label>
+                    <select class="form-select" @bind="SelectedKIBType">
+                        <option value="">Semua Tipe</option>
+                        <option value="@KIBType.A">KIB A - Tanah</option>
+                        <option value="@KIBType.B">KIB B - Peralatan dan Mesin</option>
+                        <option value="@KIBType.C">KIB C - Gedung dan Bangunan</option>
+                        <option value="@KIBType.D">KIB D - Jalan, Irigasi, dan Jaringan</option>
+                        <option value="@KIBType.E">KIB E - Aset Tetap Lainnya</option>
+                        <option value="@KIBType.F">KIB F - Konstruksi Dalam Pengerjaan</option>
+                        <option value="@KIBType.Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" @bind="SelectedStatus">
+                        <option value="">Semua</option>
+                        <option value="true">Aktif</option>
+                        <option value="false">Tidak Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary me-2" @onclick="SearchKodeBarangs">
+                        <i class="bi bi-search"></i> Cari
+                    </button>
+                    <button class="btn btn-secondary" @onclick="ResetFilters">
+                        <i class="bi bi-arrow-clockwise"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kode Barang Table -->
+    <div class="card">
+        <div class="card-body">
+            @if (IsLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+            }
+            else if (KodeBarangs.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <p class="mt-3 text-muted">Tidak ada data Kode Barang</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Kode Barang</th>
+                                <th>Nama Barang</th>
+                                <th>Tipe KIB</th>
+                                <th>Satuan</th>
+                                <th>Masa Manfaat</th>
+                                <th>Nilai Residu</th>
+                                <th>Status</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kb in KodeBarangs)
+                            {
+                                <tr>
+                                    <td><strong>@kb.KodeBarang1</strong></td>
+                                    <td>@kb.NamaBarang</td>
+                                    <td>
+                                        <span class="badge bg-info">KIB @kb.KIBType</span>
+                                    </td>
+                                    <td>@kb.Satuan</td>
+                                    <td>@(kb.MasaManfaat.HasValue ? $"{kb.MasaManfaat} tahun" : "-")</td>
+                                    <td>@(kb.NilaiResidu.HasValue ? $"{kb.NilaiResidu}%" : "-")</td>
+                                    <td>
+                                        @if (kb.IsActive)
+                                        {
+                                            <span class="badge bg-success">Aktif</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Tidak Aktif</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary me-1"
+                                                @onclick="() => OpenEditModal(kb.Id)"
+                                                title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                @onclick="() => ConfirmDelete(kb.Id)"
+                                                title="Nonaktifkan">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        Menampilkan @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) dari @TotalCount data
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(CurrentPage - 1)">Previous</button>
+                            </li>
+                            @for (int i = Math.Max(1, CurrentPage - 2); i <= Math.Min(TotalPages, CurrentPage + 2); i++)
+                            {
+                                var pageNum = i;
+                                <li class="page-item @(CurrentPage == pageNum ? "active" : "")">
+                                    <button class="page-link" @onclick="() => ChangePage(pageNum)">@pageNum</button>
+                                </li>
+                            }
+                            <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(CurrentPage + 1)">Next</button>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+@if (ShowModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(IsEditMode ? "Edit Kode Barang" : "Tambah Kode Barang")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="CurrentKodeBarang" OnValidSubmit="SaveKodeBarang">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="CurrentKodeBarang.KodeBarang1"
+                                           placeholder="Contoh: 1.01.01.001" />
+                                <ValidationMessage For="() => CurrentKodeBarang.KodeBarang1" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="CurrentKodeBarang.NamaBarang"
+                                           placeholder="Contoh: Laptop" />
+                                <ValidationMessage For="() => CurrentKodeBarang.NamaBarang" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Tipe KIB <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="CurrentKodeBarang.KIBType">
+                                    <option value="@KIBType.A">KIB A - Tanah</option>
+                                    <option value="@KIBType.B">KIB B - Peralatan dan Mesin</option>
+                                    <option value="@KIBType.C">KIB C - Gedung dan Bangunan</option>
+                                    <option value="@KIBType.D">KIB D - Jalan, Irigasi, dan Jaringan</option>
+                                    <option value="@KIBType.E">KIB E - Aset Tetap Lainnya</option>
+                                    <option value="@KIBType.F">KIB F - Konstruksi Dalam Pengerjaan</option>
+                                    <option value="@KIBType.Lainnya">Lainnya</option>
+                                </InputSelect>
+                                <ValidationMessage For="() => CurrentKodeBarang.KIBType" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Satuan</label>
+                                <InputText class="form-control" @bind-Value="CurrentKodeBarang.Satuan"
+                                           placeholder="Contoh: Unit, Buah, M2" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Masa Manfaat (Tahun)</label>
+                                <InputNumber class="form-control" @bind-Value="CurrentKodeBarang.MasaManfaat"
+                                             placeholder="Contoh: 5" />
+                                <small class="text-muted">Untuk perhitungan penyusutan</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Nilai Residu (%)</label>
+                                <InputNumber class="form-control" @bind-Value="CurrentKodeBarang.NilaiResidu"
+                                             placeholder="Contoh: 10" />
+                                <small class="text-muted">Persentase nilai sisa aset</small>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Spesifikasi</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="CurrentKodeBarang.Spesifikasi"
+                                               placeholder="Deskripsi detail barang" />
+                            </div>
+
+                            <div class="col-12">
+                                <InputCheckbox class="form-check-input" @bind-Value="CurrentKodeBarang.IsActive" id="isActiveCheck" />
+                                <label class="form-check-label ms-2" for="isActiveCheck">Aktif</label>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Batal</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveKodeBarang" disabled="@IsSaving">
+                        @if (IsSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (ShowDeleteConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Konfirmasi Nonaktifkan</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => ShowDeleteConfirm = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Apakah Anda yakin ingin menonaktifkan Kode Barang ini?</p>
+                    <p class="text-warning"><strong>Catatan:</strong> Data tidak akan dihapus, hanya dinonaktifkan.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => ShowDeleteConfirm = false">Batal</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteKodeBarang" disabled="@IsDeleting">
+                        @if (IsDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Nonaktifkan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Lists
+    private List<KodeBarang> KodeBarangs { get; set; } = new();
+
+    // Pagination
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalCount { get; set; }
+    private int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+
+    // Filters
+    private string SearchTerm { get; set; } = string.Empty;
+    private string SelectedStatus { get; set; } = string.Empty;
+    private string SelectedKIBType { get; set; } = string.Empty;
+
+    // Modal
+    private bool ShowModal { get; set; }
+    private bool IsEditMode { get; set; }
+    private KodeBarang CurrentKodeBarang { get; set; } = new();
+
+    // Delete
+    private bool ShowDeleteConfirm { get; set; }
+    private int KodeBarangToDeleteId { get; set; }
+
+    // Loading states
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+    private bool IsDeleting { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await SearchKodeBarangs();
+    }
+
+    private async Task SearchKodeBarangs()
+    {
+        IsLoading = true;
+
+        bool? isActive = null;
+        if (!string.IsNullOrEmpty(SelectedStatus) && bool.TryParse(SelectedStatus, out var status))
+        {
+            isActive = status;
+        }
+
+        KIBType? kibType = null;
+        if (!string.IsNullOrEmpty(SelectedKIBType) && Enum.TryParse<KIBType>(SelectedKIBType, out var type))
+        {
+            kibType = type;
+        }
+
+        var result = await KodeBarangService.GetKodeBarangsAsync(
+            CurrentPage,
+            PageSize,
+            SearchTerm,
+            isActive,
+            kibType);
+
+        KodeBarangs = result.KodeBarangs;
+        TotalCount = result.TotalCount;
+
+        IsLoading = false;
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+        CurrentPage = page;
+        await SearchKodeBarangs();
+    }
+
+    private async Task ResetFilters()
+    {
+        SearchTerm = string.Empty;
+        SelectedStatus = string.Empty;
+        SelectedKIBType = string.Empty;
+        CurrentPage = 1;
+        await SearchKodeBarangs();
+    }
+
+    private void OpenAddModal()
+    {
+        IsEditMode = false;
+        CurrentKodeBarang = new KodeBarang
+            {
+                IsActive = true,
+                KIBType = KIBType.B // Default to Peralatan dan Mesin
+            };
+        ShowModal = true;
+    }
+
+    private async Task OpenEditModal(int id)
+    {
+        IsEditMode = true;
+        var kodeBarang = await KodeBarangService.GetKodeBarangByIdAsync(id);
+        if (kodeBarang != null)
+        {
+            CurrentKodeBarang = kodeBarang;
+            ShowModal = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        ShowModal = false;
+        CurrentKodeBarang = new();
+    }
+
+    private async Task SaveKodeBarang()
+    {
+        IsSaving = true;
+
+        try
+        {
+            // Validate unique kode
+            if (!await KodeBarangService.IsKodeBarangUniqueAsync(CurrentKodeBarang.KodeBarang1, IsEditMode ? CurrentKodeBarang.Id : null))
+            {
+                await JS.InvokeVoidAsync("alert", "Kode Barang sudah digunakan!");
+                IsSaving = false;
+                return;
+            }
+
+            if (IsEditMode)
+            {
+                await KodeBarangService.UpdateKodeBarangAsync(CurrentKodeBarang);
+            }
+            else
+            {
+                await KodeBarangService.CreateKodeBarangAsync(CurrentKodeBarang);
+            }
+
+            CloseModal();
+            await SearchKodeBarangs();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        KodeBarangToDeleteId = id;
+        ShowDeleteConfirm = true;
+    }
+
+    private async Task DeleteKodeBarang()
+    {
+        IsDeleting = true;
+
+        try
+        {
+            await KodeBarangService.DeleteKodeBarangAsync(KodeBarangToDeleteId);
+            ShowDeleteConfirm = false;
+            await SearchKodeBarangs();
+        }
+        finally
+        {
+            IsDeleting = false;
+        }
+    }
+}

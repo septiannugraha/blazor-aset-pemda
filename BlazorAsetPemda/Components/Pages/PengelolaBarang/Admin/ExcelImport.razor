@@ -1,0 +1,358 @@
+@page "/pengelola-barang/admin/excel-import"
+@using BlazorAsetPemda.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@inject BMDReferenceImportService BMDService
+@inject AssetDataImportService AssetService
+@inject IWebHostEnvironment Environment
+@rendermode InteractiveServer
+
+<PageTitle>Import Data Excel</PageTitle>
+
+<div class="container-fluid">
+    <h3 class="mb-4">Import Data dari Excel</h3>
+
+    <div class="row">
+        <!-- BMD Reference Code Import -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+                        Import Kode Rekening BMD
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Import kode rekening BMD dari file Permendagri 108 Tahun 2016
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label">File Excel (Permendagri):</label>
+                        <InputFile OnChange="OnBMDFileSelected" class="form-control" accept=".xlsx,.xls" />
+                        @if (!string.IsNullOrEmpty(bmdFileName))
+                        {
+                            <small class="text-success">
+                                <i class="bi bi-check-circle me-1"></i>@bmdFileName
+                            </small>
+                        }
+                    </div>
+
+                    <button class="btn btn-primary" @onclick="ImportBMDReferences" disabled="@(string.IsNullOrEmpty(bmdFileName) || isBMDImporting)">
+                        @if (isBMDImporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Importing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-upload me-2"></i>
+                            <span>Import Kode Rekening BMD</span>
+                        }
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(bmdImportMessage))
+                    {
+                        <div class="alert @(bmdImportSuccess ? "alert-success" : "alert-danger") mt-3">
+                            @bmdImportMessage
+                        </div>
+                    }
+
+                    @if (bmdResult != null && bmdResult.Errors.Count > 0)
+                    {
+                        <div class="mt-3">
+                            <h6 class="text-danger">Errors (@bmdResult.Errors.Count):</h6>
+                            <ul class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                                @foreach (var error in bmdResult.Errors.Take(10))
+                                {
+                                    <li class="list-group-item list-group-item-danger small">@error</li>
+                                }
+                                @if (bmdResult.Errors.Count > 10)
+                                {
+                                    <li class="list-group-item text-muted small">... and @(bmdResult.Errors.Count - 10) more errors</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Total records in database: @bmdTotalCount
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Asset Data Import -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-excel me-2"></i>
+                        Import Data Aset
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Import data aset dari file Excel (format EXCELL 7)
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label">File Excel (Data Aset):</label>
+                        <InputFile OnChange="OnAssetFileSelected" class="form-control" accept=".xlsx,.xls" />
+                        @if (!string.IsNullOrEmpty(assetFileName))
+                        {
+                            <small class="text-success">
+                                <i class="bi bi-check-circle me-1"></i>@assetFileName
+                            </small>
+                        }
+                    </div>
+
+                    <button class="btn btn-success" @onclick="ImportAssetData" disabled="@(string.IsNullOrEmpty(assetFileName) || isAssetImporting)">
+                        @if (isAssetImporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Importing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-upload me-2"></i>
+                            <span>Import Data Aset</span>
+                        }
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(assetImportMessage))
+                    {
+                        <div class="alert @(assetImportSuccess ? "alert-success" : "alert-danger") mt-3">
+                            @assetImportMessage
+                        </div>
+                    }
+
+                    @if (assetResult != null && assetResult.Errors.Count > 0)
+                    {
+                        <div class="mt-3">
+                            <h6 class="text-danger">Errors (@assetResult.Errors.Count):</h6>
+                            <ul class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                                @foreach (var error in assetResult.Errors.Take(10))
+                                {
+                                    <li class="list-group-item list-group-item-danger small">@error</li>
+                                }
+                                @if (assetResult.Errors.Count > 10)
+                                {
+                                    <li class="list-group-item text-muted small">... and @(assetResult.Errors.Count - 10) more errors</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Total records in database: @assetTotalCount
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Instructions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Petunjuk Import
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Import Kode Rekening BMD:</h6>
+                            <ol>
+                                <li>Gunakan file Excel Permendagri Nomor 108 Tahun 2016 Lampiran 2</li>
+                                <li>Sheet yang digunakan: "SEMUA KODE"</li>
+                                <li>Sistem akan membaca kolom: Akun, Kelompok, Jenis, Objek, Rincian Objek, Sub Rincian Objek, Sub-Sub Rincian Objek, dan Uraian</li>
+                                <li>Kode rekening akan dibuat dalam format: xx.xx.xx.xx.xx.xx.xx</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Import Data Aset:</h6>
+                            <ol>
+                                <li>Gunakan file Excel format EXCELL 7 dengan sheet "Input Data"</li>
+                                <li>File harus memiliki 43 kolom sesuai format standar</li>
+                                <li>Data akan disimpan tanpa validasi (copy langsung)</li>
+                                <li>Header kolom harus ada di row 10</li>
+                                <li>Data dimulai dari row 11</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+
+    private string? bmdFileName;
+    private string? assetFileName;
+    private string? bmdFilePath;
+    private string? assetFilePath;
+
+    private bool isBMDImporting = false;
+    private bool isAssetImporting = false;
+
+    private string? bmdImportMessage;
+    private string? assetImportMessage;
+
+    private bool bmdImportSuccess = false;
+    private bool assetImportSuccess = false;
+
+    private ImportResult? bmdResult;
+    private ImportResult? assetResult;
+
+    private int bmdTotalCount = 0;
+    private int assetTotalCount = 0;
+
+    private string? currentUserName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshCounts();
+
+        if (authenticationStateTask != null)
+        {
+            var authState = await authenticationStateTask;
+            currentUserName = authState.User.Identity?.Name;
+        }
+    }
+
+    private async Task RefreshCounts()
+    {
+        bmdTotalCount = await BMDService.GetTotalCountAsync();
+        assetTotalCount = await AssetService.GetTotalCountAsync();
+    }
+
+    private async Task OnBMDFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            bmdFileName = file.Name;
+
+            // Save file to temp location
+            var uploadsPath = Path.Combine(Environment.ContentRootPath, "uploads");
+            Directory.CreateDirectory(uploadsPath);
+
+            bmdFilePath = Path.Combine(uploadsPath, $"bmd_{Guid.NewGuid()}_{file.Name}");
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024); // 50MB max
+            using var fileStream = File.Create(bmdFilePath);
+            await stream.CopyToAsync(fileStream);
+        }
+    }
+
+    private async Task OnAssetFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            assetFileName = file.Name;
+
+            // Save file to temp location
+            var uploadsPath = Path.Combine(Environment.ContentRootPath, "uploads");
+            Directory.CreateDirectory(uploadsPath);
+
+            assetFilePath = Path.Combine(uploadsPath, $"asset_{Guid.NewGuid()}_{file.Name}");
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024); // 100MB max
+            using var fileStream = File.Create(assetFilePath);
+            await stream.CopyToAsync(fileStream);
+        }
+    }
+
+    private async Task ImportBMDReferences()
+    {
+        if (string.IsNullOrEmpty(bmdFilePath))
+        {
+            bmdImportMessage = "Please select a file first";
+            bmdImportSuccess = false;
+            return;
+        }
+
+        isBMDImporting = true;
+        bmdImportMessage = null;
+        bmdResult = null;
+
+        try
+        {
+            bmdResult = await BMDService.ImportFromExcelAsync(bmdFilePath);
+            bmdImportSuccess = bmdResult.IsSuccess;
+            bmdImportMessage = bmdResult.GetSummary();
+
+            await RefreshCounts();
+
+            // Clean up temp file
+            if (File.Exists(bmdFilePath))
+            {
+                File.Delete(bmdFilePath);
+            }
+            bmdFilePath = null;
+            bmdFileName = null;
+        }
+        catch (Exception ex)
+        {
+            bmdImportSuccess = false;
+            bmdImportMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isBMDImporting = false;
+        }
+    }
+
+    private async Task ImportAssetData()
+    {
+        if (string.IsNullOrEmpty(assetFilePath))
+        {
+            assetImportMessage = "Please select a file first";
+            assetImportSuccess = false;
+            return;
+        }
+
+        isAssetImporting = true;
+        assetImportMessage = null;
+        assetResult = null;
+
+        try
+        {
+            assetResult = await AssetService.ImportFromExcelAsync(assetFilePath, "Input Data", currentUserName);
+            assetImportSuccess = assetResult.IsSuccess;
+            assetImportMessage = assetResult.GetSummary();
+
+            await RefreshCounts();
+
+            // Clean up temp file
+            if (File.Exists(assetFilePath))
+            {
+                File.Delete(assetFilePath);
+            }
+            assetFilePath = null;
+            assetFileName = null;
+        }
+        catch (Exception ex)
+        {
+            assetImportSuccess = false;
+            assetImportMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isAssetImporting = false;
+        }
+    }
+}

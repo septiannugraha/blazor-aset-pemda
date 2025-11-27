@@ -1,0 +1,29 @@
+@page "/pengelola-barang/inventarisasi/monitoring-tl"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+
+<PageTitle>Monitoring TL</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 mb-0">Monitoring TL</h1>
+            <p class="text-muted">Monitoring barang berstatus Tidak Layak (TL)</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary">
+                <i class="bi bi-file-earmark-excel"></i> Ekspor Data
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-eye display-1 text-muted"></i>
+            <h3 class="mt-3">Halaman Dalam Pengembangan</h3>
+            <p class="text-muted">Fitur monitoring TL akan tersedia segera</p>
+            <p class="small text-muted">Halaman ini akan menampilkan dashboard monitoring barang berstatus Tidak Layak</p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,42 @@
+# Database backups
+backup/
+*.bak
+
+# Reference Excel files (large files)
+references/
+
+# Windows artifacts
+nul
+
+# ExcelReaderTool (utility tool)
+ExcelReaderTool/
+ExcelReader.cs
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build outputs
+bin/
+obj/
+
+# IDE
+.idea/
+.vscode/
+
+# Claude Code (internal use)
+.claude/
+
+# Documentation (except README)
+*.md
+!README.md
+!docker/README.md
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Zip files
+*.zip

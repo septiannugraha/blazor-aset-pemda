@@ -1,0 +1,482 @@
+@page "/pengelola-barang/saldo-awal/tambah"
+@page "/pengelola-barang/saldo-awal/edit/{id:int}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+@inject AssetService AssetService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@using BlazorAsetPemda.Data.Enums
+
+<PageTitle>@(IsEditMode ? "Edit Aset" : "Tambah Aset") - Saldo Awal</PageTitle>
+
+<div class="container-fluid">
+    <!-- Header with Save Buttons -->
+    <div class="row mb-3 sticky-top bg-white py-2" style="top: 0; z-index: 100;">
+        <div class="col">
+            <h1 class="h3 mb-0">@(IsEditMode ? "Edit Aset" : "Tambah Aset Baru")</h1>
+            <p class="text-muted">Formulir Entry Barang Milik Daerah</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <button class="btn btn-secondary" @onclick='() => NavigationManager.NavigateTo("/pengelola-barang/saldo-awal")' disabled="@IsSaving">
+                <i class="bi bi-x-circle"></i> Batal
+            </button>
+            <button class="btn btn-primary" @onclick="SaveAsset" disabled="@IsSaving">
+                @if (IsSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                <i class="bi bi-save"></i> Simpan
+            </button>
+        </div>
+    </div>
+
+    <EditForm Model="CurrentAsset" OnValidSubmit="SaveAsset">
+        <DataAnnotationsValidator />
+
+        <!-- Accordion Sections -->
+        <div class="accordion" id="assetFormAccordion">
+
+            <!-- Section 1: Basic Information -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#section1">
+                        <i class="bi bi-info-circle me-2"></i> 1. Informasi Dasar
+                    </button>
+                </h2>
+                <div id="section1" class="accordion-collapse collapse show" data-bs-parent="#assetFormAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Tipe KIB <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.KIBType" @bind-Value:after="OnKIBTypeChanged">
+                                    <option value="@KIBType.A">KIB A - Tanah</option>
+                                    <option value="@KIBType.B">KIB B - Peralatan dan Mesin</option>
+                                    <option value="@KIBType.C">KIB C - Gedung dan Bangunan</option>
+                                    <option value="@KIBType.D">KIB D - Jalan, Irigasi, dan Jaringan</option>
+                                    <option value="@KIBType.E">KIB E - Aset Tetap Lainnya</option>
+                                    <option value="@KIBType.F">KIB F - Konstruksi Dalam Pengerjaan</option>
+                                    <option value="@KIBType.Lainnya">Lainnya</option>
+                                </InputSelect>
+                                <ValidationMessage For="() => CurrentAsset.KIBType" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Nomor Register <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.NomorRegister" placeholder="Auto atau manual" />
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="GenerateNomorRegister" disabled="@(CurrentAsset.SkpdId == 0 || CurrentAsset.Tahun == 0)">
+                                        <i class="bi bi-magic"></i> Generate
+                                    </button>
+                                </div>
+                                <ValidationMessage For="() => CurrentAsset.NomorRegister" />
+                                <small class="text-muted">Pilih SKPD dan Tahun untuk auto-generate</small>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Tahun <span class="text-danger">*</span></label>
+                                <InputNumber class="form-control" @bind-Value="CurrentAsset.Tahun" placeholder="@DateTime.Now.Year" />
+                                <ValidationMessage For="() => CurrentAsset.Tahun" />
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Kondisi</label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.Kondisi">
+                                    <option value="">-Pilih-</option>
+                                    <option value="Baik">Baik</option>
+                                    <option value="Rusak Ringan">Rusak Ringan</option>
+                                    <option value="Rusak Berat">Rusak Berat</option>
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="CurrentAsset.NamaBarang" placeholder="Contoh: Laptop Lenovo ThinkPad X1" />
+                                <ValidationMessage For="() => CurrentAsset.NamaBarang" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Organization & Location -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#section2">
+                        <i class="bi bi-building me-2"></i> 2. Organisasi & Lokasi
+                    </button>
+                </h2>
+                <div id="section2" class="accordion-collapse collapse" data-bs-parent="#assetFormAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">SKPD <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.SkpdId" @bind-Value:after="OnSkpdChanged">
+                                    <option value="0">-- Pilih SKPD --</option>
+                                    @foreach (var skpd in SKPDs)
+                                    {
+                                        <option value="@skpd.Id">@skpd.KodeSKPD - @skpd.NamaSKPD</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => CurrentAsset.SkpdId" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">UPB</label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.UpbId">
+                                    <option value="">-- Pilih UPB (Opsional) --</option>
+                                    @foreach (var upb in UPBs)
+                                    {
+                                        <option value="@upb.Id">@upb.KodeUPB - @upb.NamaUPB</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.KodeBarangId">
+                                    <option value="0">-- Pilih Kode Barang --</option>
+                                    @foreach (var kb in KodeBarangs)
+                                    {
+                                        <option value="@kb.Id">@kb.KodeBarang1 - @kb.NamaBarang</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => CurrentAsset.KodeBarangId" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Kode Rekening <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="CurrentAsset.KodeRekening" placeholder="Contoh: 1.3.2.01.01" />
+                                <ValidationMessage For="() => CurrentAsset.KodeRekening" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Ruangan</label>
+                                <InputText class="form-control" @bind-Value="CurrentAsset.Ruangan" placeholder="Contoh: Ruang Rapat" />
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Alamat</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="CurrentAsset.Alamat" placeholder="Alamat lengkap lokasi aset" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Acquisition Details -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#section3">
+                        <i class="bi bi-cart-check me-2"></i> 3. Detail Perolehan
+                    </button>
+                </h2>
+                <div id="section3" class="accordion-collapse collapse" data-bs-parent="#assetFormAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Tanggal Perolehan <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="CurrentAsset.TanggalPerolehan" />
+                                <ValidationMessage For="() => CurrentAsset.TanggalPerolehan" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Asal Usul</label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.AsalUsul">
+                                    <option value="">-- Pilih Asal Usul --</option>
+                                    <option value="Pembelian">Pembelian</option>
+                                    <option value="Hibah">Hibah</option>
+                                    <option value="Sumbangan">Sumbangan</option>
+                                    <option value="Transfer">Transfer</option>
+                                    <option value="Pembangunan">Pembangunan</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Harga (Rp) <span class="text-danger">*</span></label>
+                                <InputNumber class="form-control" @bind-Value="CurrentAsset.Harga" placeholder="0" />
+                                <ValidationMessage For="() => CurrentAsset.Harga" />
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Kontrak (Opsional)</label>
+                                <InputSelect class="form-select" @bind-Value="CurrentAsset.KontrakId">
+                                    <option value="">-- Tidak Ada Kontrak --</option>
+                                    @foreach (var kontrak in Kontraks)
+                                    {
+                                        <option value="@kontrak.Id">@kontrak.NomorKontrak - @kontrak.NamaPaket</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Physical Specifications (Dynamic based on KIB) -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#section4">
+                        <i class="bi bi-rulers me-2"></i> 4. Spesifikasi Fisik
+                    </button>
+                </h2>
+                <div id="section4" class="accordion-collapse collapse" data-bs-parent="#assetFormAccordion">
+                    <div class="accordion-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Isi sesuai dengan Tipe KIB: <strong>KIB @CurrentAsset.KIBType</strong>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- Common for KIB A, C, D, F -->
+                            @if (CurrentAsset.KIBType == KIBType.A || CurrentAsset.KIBType == KIBType.C ||
+                                 CurrentAsset.KIBType == KIBType.D || CurrentAsset.KIBType == KIBType.F)
+                            {
+                                <div class="col-md-3">
+                                    <label class="form-label">Panjang (m)</label>
+                                    <InputNumber class="form-control" @bind-Value="CurrentAsset.Panjang" placeholder="0.00" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Lebar (m)</label>
+                                    <InputNumber class="form-control" @bind-Value="CurrentAsset.Lebar" placeholder="0.00" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Luas (m²)</label>
+                                    <InputNumber class="form-control" @bind-Value="CurrentAsset.Luas" placeholder="0.00" />
+                                </div>
+                            }
+
+                            <!-- KIB C only -->
+                            @if (CurrentAsset.KIBType == KIBType.C)
+                            {
+                                <div class="col-md-3">
+                                    <label class="form-label">Tinggi (m)</label>
+                                    <InputNumber class="form-control" @bind-Value="CurrentAsset.Tinggi" placeholder="0.00" />
+                                </div>
+                            }
+
+                            <!-- KIB B, C, D, E -->
+                            @if (CurrentAsset.KIBType == KIBType.B || CurrentAsset.KIBType == KIBType.C ||
+                                 CurrentAsset.KIBType == KIBType.D || CurrentAsset.KIBType == KIBType.E)
+                            {
+                                <div class="col-md-6">
+                                    <label class="form-label">Bahan</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.Bahan" placeholder="Contoh: Beton, Kayu, Logam" />
+                                </div>
+                            }
+
+                            <!-- KIB B, E (Peralatan/Mesin) -->
+                            @if (CurrentAsset.KIBType == KIBType.B || CurrentAsset.KIBType == KIBType.E)
+                            {
+                                <div class="col-md-6">
+                                    <label class="form-label">Merk</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.Merk" placeholder="Contoh: Toyota, HP, Yamaha" />
+                                </div>
+                            }
+
+                            <!-- KIB B only (Vehicles/Machinery) -->
+                            @if (CurrentAsset.KIBType == KIBType.B)
+                            {
+                                <div class="col-md-6">
+                                    <label class="form-label">Nomor Pabrik</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.NomorPabrik" placeholder="Factory number" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Nomor Rangka</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.NomorRangka" placeholder="Chassis number" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Nomor Mesin</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.NomorMesin" placeholder="Engine number" />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Nomor Polisi</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.NomorPolisi" placeholder="Plate number" />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Nomor BPKB</label>
+                                    <InputText class="form-control" @bind-Value="CurrentAsset.NomorBPKB" placeholder="Vehicle registration" />
+                                </div>
+                            }
+
+                            @if (CurrentAsset.KIBType == KIBType.Lainnya ||
+                                 (CurrentAsset.KIBType != KIBType.A && CurrentAsset.KIBType != KIBType.B &&
+                                  CurrentAsset.KIBType != KIBType.C && CurrentAsset.KIBType != KIBType.D &&
+                                  CurrentAsset.KIBType != KIBType.E && CurrentAsset.KIBType != KIBType.F))
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-secondary">
+                                        <i class="bi bi-info-circle"></i> Tidak ada spesifikasi khusus untuk tipe ini. Gunakan field Keterangan untuk detail tambahan.
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Additional Information -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#section5">
+                        <i class="bi bi-journal-text me-2"></i> 5. Informasi Tambahan
+                    </button>
+                </h2>
+                <div id="section5" class="accordion-collapse collapse" data-bs-parent="#assetFormAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Keterangan</label>
+                                <InputTextArea class="form-control" rows="4" @bind-Value="CurrentAsset.Keterangan"
+                                               placeholder="Catatan tambahan, kondisi detail, atau informasi penting lainnya..." />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Save Buttons -->
+        <div class="row mt-4 mb-5">
+            <div class="col-12 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" @onclick='() => NavigationManager.NavigateTo("/pengelola-barang/saldo-awal")' disabled="@IsSaving">
+                    <i class="bi bi-x-circle"></i> Batal
+                </button>
+                <button type="submit" class="btn btn-primary btn-lg" disabled="@IsSaving">
+                    @if (IsSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    <i class="bi bi-save"></i> @(IsEditMode ? "Update Aset" : "Simpan Aset")
+                </button>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Asset CurrentAsset { get; set; } = new();
+    private List<SKPD> SKPDs { get; set; } = new();
+    private List<UPB> UPBs { get; set; } = new();
+    private List<KodeBarang> KodeBarangs { get; set; } = new();
+    private List<Kontrak> Kontraks { get; set; } = new();
+
+    private bool IsEditMode => Id.HasValue && Id.Value > 0;
+    private bool IsSaving { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDropdownData();
+
+        if (IsEditMode)
+        {
+            var asset = await AssetService.GetAssetByIdAsync(Id!.Value);
+            if (asset != null)
+            {
+                CurrentAsset = asset;
+                await OnSkpdChanged();
+                await OnKIBTypeChanged();
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/pengelola-barang/saldo-awal");
+            }
+        }
+        else
+        {
+            // Initialize new asset with defaults
+            CurrentAsset = new Asset
+            {
+                TanggalPerolehan = DateTime.Now,
+                Tahun = DateTime.Now.Year,
+                KIBType = KIBType.B, // Default to Peralatan & Mesin
+                Kondisi = "Baik"
+            };
+            await OnKIBTypeChanged();
+        }
+    }
+
+    private async Task LoadDropdownData()
+    {
+        SKPDs = await AssetService.GetAllSKPDsAsync();
+        Kontraks = await AssetService.GetActiveKontraksAsync();
+    }
+
+    private async Task OnSkpdChanged()
+    {
+        UPBs = new List<UPB>();
+        if (CurrentAsset.SkpdId > 0)
+        {
+            UPBs = await AssetService.GetUPBsBySKPDAsync(CurrentAsset.SkpdId);
+        }
+    }
+
+    private async Task OnKIBTypeChanged()
+    {
+        KodeBarangs = await AssetService.GetKodeBarangsByKIBAsync(CurrentAsset.KIBType);
+    }
+
+    private async Task GenerateNomorRegister()
+    {
+        if (CurrentAsset.SkpdId > 0 && CurrentAsset.Tahun > 0)
+        {
+            CurrentAsset.NomorRegister = await AssetService.GenerateNomorRegisterAsync(
+                CurrentAsset.SkpdId,
+                CurrentAsset.KIBType,
+                CurrentAsset.Tahun);
+        }
+    }
+
+    private async Task SaveAsset()
+    {
+        IsSaving = true;
+
+        try
+        {
+            // Validation
+            if (CurrentAsset.SkpdId == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "Silakan pilih SKPD!");
+                IsSaving = false;
+                return;
+            }
+
+            if (CurrentAsset.KodeBarangId == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "Silakan pilih Kode Barang!");
+                IsSaving = false;
+                return;
+            }
+
+            if (IsEditMode)
+            {
+                await AssetService.UpdateAssetAsync(CurrentAsset);
+                await JS.InvokeVoidAsync("alert", "Aset berhasil diupdate!");
+            }
+            else
+            {
+                await AssetService.CreateAssetAsync(CurrentAsset);
+                await JS.InvokeVoidAsync("alert", "Aset berhasil ditambahkan!");
+            }
+
+            NavigationManager.NavigateTo("/pengelola-barang/saldo-awal");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+}

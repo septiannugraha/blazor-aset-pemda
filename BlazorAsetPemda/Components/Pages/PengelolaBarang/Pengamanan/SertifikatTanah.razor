@@ -1,0 +1,29 @@
+@page "/pengelola-barang/pengamanan/sertifikat-tanah"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+
+<PageTitle>Sertifikat Tanah</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 mb-0">Sertifikat Tanah</h1>
+            <p class="text-muted">Kelola data sertifikat tanah milik daerah</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Tambah Sertifikat
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-file-earmark-text display-1 text-muted"></i>
+            <h3 class="mt-3">Halaman Dalam Pengembangan</h3>
+            <p class="text-muted">Fitur sertifikat tanah akan tersedia segera</p>
+            <p class="small text-muted">Halaman ini akan menampilkan form dan daftar sertifikat tanah milik daerah</p>
+        </div>
+    </div>
+</div>

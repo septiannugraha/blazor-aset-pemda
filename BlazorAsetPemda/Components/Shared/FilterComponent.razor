@@ -1,0 +1,88 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Filter Data</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Pengguna Barang</label>
+                <select class="form-select" @bind="SelectedPenggunaBarangId" @bind:after="OnFilterChanged">
+                    <option value="0">-- Semua --</option>
+                    @foreach (var upb in PenggunaBarangList)
+                    {
+                        <option value="@upb.Id">@upb.NamaUPB</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Jenis Tahun</label>
+                <select class="form-select" @bind="SelectedJenisTahun" @bind:after="OnFilterChanged">
+                    <option value="sampai-dengan">Sampai Dengan</option>
+                    <option value="hanya-tahun">Hanya Tahun</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Tahun</label>
+                <select class="form-select" @bind="SelectedTahun" @bind:after="OnFilterChanged">
+                    @for (int year = DateTime.Now.Year + 1; year >= 2010; year--)
+                    {
+                        <option value="@year">@year</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" @onclick="OnFilterChanged">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<FilterParameters> OnFilterChange { get; set; }
+
+    [Inject]
+    public IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = null!;
+
+    private List<UPB> PenggunaBarangList { get; set; } = new();
+    private int SelectedPenggunaBarangId { get; set; } = 0;
+    private string SelectedJenisTahun { get; set; } = "sampai-dengan";
+    private int SelectedTahun { get; set; } = DateTime.Now.Year;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        PenggunaBarangList = await context.UPBs
+            .Include(u => u.SKPD)
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.NamaUPB)
+            .ToListAsync();
+
+        // Initialize with current filter values
+        await OnFilterChanged();
+    }
+
+    private async Task OnFilterChanged()
+    {
+        var filterParams = new FilterParameters
+        {
+            PenggunaBarangId = SelectedPenggunaBarangId,
+            JenisTahun = SelectedJenisTahun,
+            Tahun = SelectedTahun
+        };
+
+        await OnFilterChange.InvokeAsync(filterParams);
+    }
+
+    public class FilterParameters
+    {
+        public int PenggunaBarangId { get; set; }
+        public string JenisTahun { get; set; } = "sampai-dengan";
+        public int Tahun { get; set; }
+    }
+}

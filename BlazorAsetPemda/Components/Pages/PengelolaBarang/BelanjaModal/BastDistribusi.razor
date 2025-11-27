@@ -1,0 +1,29 @@
+@page "/pengelola-barang/belanja-modal/bast-distribusi"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+
+<PageTitle>BAST dan Distribusi - Belanja Modal</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 mb-0">BAST dan Distribusi</h1>
+            <p class="text-muted">Berita Acara Serah Terima dan Distribusi Barang</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Tambah BAST
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-clipboard-check display-1 text-muted"></i>
+            <h3 class="mt-3">Halaman Dalam Pengembangan</h3>
+            <p class="text-muted">Fitur BAST dan Distribusi akan segera tersedia.</p>
+            <p class="small text-muted">Menu ini akan berisi manajemen BAST dan distribusi barang modal.</p>
+        </div>
+    </div>
+</div>

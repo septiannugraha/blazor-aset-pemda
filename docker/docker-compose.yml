@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # ClickHouse - Analytics database
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1
+    container_name: clickhouse
+    ports:
+      - "18123:8123"  # HTTP interface (for queries)
+      - "19000:9000"  # Native interface
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    restart: unless-stopped
+
+volumes:
+  clickhouse-data:

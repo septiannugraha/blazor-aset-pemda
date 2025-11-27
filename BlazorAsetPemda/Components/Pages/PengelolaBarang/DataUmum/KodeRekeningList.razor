@@ -1,0 +1,445 @@
+@page "/pengelola-barang/data-umum/kode-rekening"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+@inject KodeRekeningService KodeRekeningService
+@inject IJSRuntime JS
+
+<PageTitle>Kode Rekening - Data Umum</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 mb-0">Data Kode Rekening</h1>
+            <p class="text-muted">Master Kode Rekening</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="OpenAddModal">
+                <i class="bi bi-plus-circle"></i> Tambah Kode Rekening
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Cari</label>
+                    <input type="text" class="form-control" placeholder="Kode, Nama Rekening..."
+                           @bind="SearchTerm" @bind:event="oninput" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Level</label>
+                    <select class="form-select" @bind="SelectedLevel">
+                        <option value="">Semua Level</option>
+                        <option value="1">Level 1</option>
+                        <option value="2">Level 2</option>
+                        <option value="3">Level 3</option>
+                        <option value="4">Level 4</option>
+                        <option value="5">Level 5</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" @bind="SelectedStatus">
+                        <option value="">Semua</option>
+                        <option value="true">Aktif</option>
+                        <option value="false">Tidak Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary me-2" @onclick="SearchKodeRekenings">
+                        <i class="bi bi-search"></i> Cari
+                    </button>
+                    <button class="btn btn-secondary" @onclick="ResetFilters">
+                        <i class="bi bi-arrow-clockwise"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kode Rekening Table -->
+    <div class="card">
+        <div class="card-body">
+            @if (IsLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+            }
+            else if (KodeRekenings.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <p class="mt-3 text-muted">Tidak ada data Kode Rekening</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Kode Rekening</th>
+                                <th>Nama Rekening</th>
+                                <th>Level</th>
+                                <th>Parent Kode</th>
+                                <th>Deskripsi</th>
+                                <th>Status</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kr in KodeRekenings)
+                            {
+                                <tr>
+                                    <td><strong>@kr.KodeRekening1</strong></td>
+                                    <td>@kr.NamaRekening</td>
+                                    <td>
+                                        <span class="badge bg-secondary">Level @kr.Level</span>
+                                    </td>
+                                    <td>@(kr.ParentKode ?? "-")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(kr.Deskripsi))
+                                        {
+                                            <small class="text-muted">@kr.Deskripsi</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (kr.IsActive)
+                                        {
+                                            <span class="badge bg-success">Aktif</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Tidak Aktif</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary me-1"
+                                                @onclick="() => OpenEditModal(kr.Id)"
+                                                title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                @onclick="() => ConfirmDelete(kr.Id)"
+                                                title="Nonaktifkan">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        Menampilkan @((CurrentPage - 1) * PageSize + 1) - @Math.Min(CurrentPage * PageSize, TotalCount) dari @TotalCount data
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(CurrentPage - 1)">Previous</button>
+                            </li>
+                            @for (int i = Math.Max(1, CurrentPage - 2); i <= Math.Min(TotalPages, CurrentPage + 2); i++)
+                            {
+                                var pageNum = i;
+                                <li class="page-item @(CurrentPage == pageNum ? "active" : "")">
+                                    <button class="page-link" @onclick="() => ChangePage(pageNum)">@pageNum</button>
+                                </li>
+                            }
+                            <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(CurrentPage + 1)">Next</button>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+@if (ShowModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(IsEditMode ? "Edit Kode Rekening" : "Tambah Kode Rekening")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="CurrentKodeRekening" OnValidSubmit="SaveKodeRekening">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Kode Rekening <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="CurrentKodeRekening.KodeRekening1"
+                                           placeholder="Contoh: 1.3.2.01.01" />
+                                <ValidationMessage For="() => CurrentKodeRekening.KodeRekening1" />
+                                <small class="text-muted">Format: X.X.X.XX.XX (sesuai hierarki)</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Nama Rekening <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="CurrentKodeRekening.NamaRekening"
+                                           placeholder="Contoh: Peralatan dan Mesin" />
+                                <ValidationMessage For="() => CurrentKodeRekening.NamaRekening" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Level <span class="text-danger">*</span></label>
+                                <InputNumber class="form-control" @bind-Value="CurrentKodeRekening.Level"
+                                             placeholder="1-5" />
+                                <ValidationMessage For="() => CurrentKodeRekening.Level" />
+                                <small class="text-muted">Level 1: Tertinggi, Level 5: Detail</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Parent Kode</label>
+                                <InputText class="form-control" @bind-Value="CurrentKodeRekening.ParentKode"
+                                           placeholder="Contoh: 1.3.2" />
+                                <small class="text-muted">Kode rekening induk (opsional)</small>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Deskripsi</label>
+                                <InputTextArea class="form-control" rows="3" @bind-Value="CurrentKodeRekening.Deskripsi"
+                                               placeholder="Deskripsi detail rekening" />
+                            </div>
+
+                            <div class="col-12">
+                                <InputCheckbox class="form-check-input" @bind-Value="CurrentKodeRekening.IsActive" id="isActiveCheck" />
+                                <label class="form-check-label ms-2" for="isActiveCheck">Aktif</label>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Batal</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveKodeRekening" disabled="@IsSaving">
+                        @if (IsSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (ShowDeleteConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Konfirmasi Nonaktifkan</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => ShowDeleteConfirm = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Apakah Anda yakin ingin menonaktifkan Kode Rekening ini?</p>
+                    <p class="text-warning"><strong>Catatan:</strong> Data tidak akan dihapus, hanya dinonaktifkan.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => ShowDeleteConfirm = false">Batal</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteKodeRekening" disabled="@IsDeleting">
+                        @if (IsDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Nonaktifkan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Lists
+    private List<KodeRekening> KodeRekenings { get; set; } = new();
+
+    // Pagination
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalCount { get; set; }
+    private int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+
+    // Filters
+    private string SearchTerm { get; set; } = string.Empty;
+    private string SelectedStatus { get; set; } = string.Empty;
+    private string SelectedLevel { get; set; } = string.Empty;
+
+    // Modal
+    private bool ShowModal { get; set; }
+    private bool IsEditMode { get; set; }
+    private KodeRekening CurrentKodeRekening { get; set; } = new();
+
+    // Delete
+    private bool ShowDeleteConfirm { get; set; }
+    private int KodeRekeningToDeleteId { get; set; }
+
+    // Loading states
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+    private bool IsDeleting { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await SearchKodeRekenings();
+    }
+
+    private async Task SearchKodeRekenings()
+    {
+        IsLoading = true;
+
+        bool? isActive = null;
+        if (!string.IsNullOrEmpty(SelectedStatus) && bool.TryParse(SelectedStatus, out var status))
+        {
+            isActive = status;
+        }
+
+        int? level = null;
+        if (!string.IsNullOrEmpty(SelectedLevel) && int.TryParse(SelectedLevel, out var lvl))
+        {
+            level = lvl;
+        }
+
+        var result = await KodeRekeningService.GetKodeRekeningsAsync(
+            CurrentPage,
+            PageSize,
+            SearchTerm,
+            isActive,
+            level);
+
+        KodeRekenings = result.KodeRekenings;
+        TotalCount = result.TotalCount;
+
+        IsLoading = false;
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+        CurrentPage = page;
+        await SearchKodeRekenings();
+    }
+
+    private async Task ResetFilters()
+    {
+        SearchTerm = string.Empty;
+        SelectedStatus = string.Empty;
+        SelectedLevel = string.Empty;
+        CurrentPage = 1;
+        await SearchKodeRekenings();
+    }
+
+    private void OpenAddModal()
+    {
+        IsEditMode = false;
+        CurrentKodeRekening = new KodeRekening
+            {
+                IsActive = true,
+                Level = 1
+            };
+        ShowModal = true;
+    }
+
+    private async Task OpenEditModal(int id)
+    {
+        IsEditMode = true;
+        var kodeRekening = await KodeRekeningService.GetKodeRekeningByIdAsync(id);
+        if (kodeRekening != null)
+        {
+            CurrentKodeRekening = kodeRekening;
+            ShowModal = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        ShowModal = false;
+        CurrentKodeRekening = new();
+    }
+
+    private async Task SaveKodeRekening()
+    {
+        IsSaving = true;
+
+        try
+        {
+            // Validate unique kode
+            if (!await KodeRekeningService.IsKodeRekeningUniqueAsync(CurrentKodeRekening.KodeRekening1, IsEditMode ? CurrentKodeRekening.Id : null))
+            {
+                await JS.InvokeVoidAsync("alert", "Kode Rekening sudah digunakan!");
+                IsSaving = false;
+                return;
+            }
+
+            if (IsEditMode)
+            {
+                await KodeRekeningService.UpdateKodeRekeningAsync(CurrentKodeRekening);
+            }
+            else
+            {
+                await KodeRekeningService.CreateKodeRekeningAsync(CurrentKodeRekening);
+            }
+
+            CloseModal();
+            await SearchKodeRekenings();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        KodeRekeningToDeleteId = id;
+        ShowDeleteConfirm = true;
+    }
+
+    private async Task DeleteKodeRekening()
+    {
+        IsDeleting = true;
+
+        try
+        {
+            await KodeRekeningService.DeleteKodeRekeningAsync(KodeRekeningToDeleteId);
+            ShowDeleteConfirm = false;
+            await SearchKodeRekenings();
+        }
+        finally
+        {
+            IsDeleting = false;
+        }
+    }
+}

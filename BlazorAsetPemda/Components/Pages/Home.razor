@@ -1,0 +1,77 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Home - Sistem BMD</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Sistem Barang Milik Daerah</h1>
+            <p class="lead mb-4">Aplikasi Pengelolaan Aset Daerah Terintegrasi</p>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="alert alert-info">
+                        <p>Selamat datang, <strong>@context.User.Identity?.Name</strong>!</p>
+                        <p>Anda akan diarahkan ke dashboard...</p>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Silakan Login</h5>
+                            <p class="card-text">Untuk mengakses sistem, silakan login terlebih dahulu.</p>
+                            <a href="Account/Login" class="btn btn-primary btn-lg">Login</a>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>Akun Demo:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Pengelola Barang</h6>
+                                        <p class="mb-1"><small>Email: pengelola@bmd.local</small></p>
+                                        <p class="mb-0"><small>Password: Pengelola123</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Pengguna Barang</h6>
+                                        <p class="mb-1"><small>Email: pengguna@bmd.local</small></p>
+                                        <p class="mb-0"><small>Password: Pengguna123</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            if (user.IsInRole("PengelolaBarang"))
+            {
+                NavigationManager.NavigateTo("/pengelola-barang/dashboard");
+            }
+            else if (user.IsInRole("PenggunaBarang"))
+            {
+                NavigationManager.NavigateTo("/pengguna-barang/dashboard");
+            }
+        }
+    }
+}

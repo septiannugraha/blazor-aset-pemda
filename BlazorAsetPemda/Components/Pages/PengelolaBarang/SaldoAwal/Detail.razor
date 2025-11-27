@@ -1,0 +1,395 @@
+@page "/pengelola-barang/saldo-awal/detail/{id:int}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+@inject AssetService AssetService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@using BlazorAsetPemda.Data.Enums
+
+<PageTitle>Detail Aset - @(Asset?.NamaBarang ?? "Loading...")</PageTitle>
+
+<div class="container-fluid">
+    @if (IsLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Memuat data aset...</p>
+        </div>
+    }
+    else if (Asset == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> Aset tidak ditemukan.
+        </div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="row mb-3">
+            <div class="col">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/pengelola-barang/saldo-awal">Saldo Awal</a></li>
+                        <li class="breadcrumb-item active">Detail Aset</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 mb-0">@Asset.NamaBarang</h1>
+                <p class="text-muted">Nomor Register: <strong>@Asset.NomorRegister</strong></p>
+            </div>
+            <div class="col-auto d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick='() => NavigationManager.NavigateTo("/pengelola-barang/saldo-awal")'>
+                    <i class="bi bi-arrow-left"></i> Kembali
+                </button>
+                <button class="btn btn-primary" @onclick='() => NavigationManager.NavigateTo($"/pengelola-barang/saldo-awal/edit/{Asset.Id}")'>
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+                <button class="btn btn-danger" @onclick="() => ShowDeleteConfirm = true">
+                    <i class="bi bi-trash"></i> Hapus
+                </button>
+            </div>
+        </div>
+
+        <!-- Asset Information Cards -->
+        <div class="row g-3">
+            <!-- Card 1: Basic Information -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-info-circle"></i> Informasi Dasar
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <th width="40%">Tipe KIB:</th>
+                                <td><span class="badge bg-info">KIB @Asset.KIBType</span></td>
+                            </tr>
+                            <tr>
+                                <th>Nomor Register:</th>
+                                <td><strong>@Asset.NomorRegister</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Nama Barang:</th>
+                                <td>@Asset.NamaBarang</td>
+                            </tr>
+                            <tr>
+                                <th>Tahun:</th>
+                                <td>@Asset.Tahun</td>
+                            </tr>
+                            <tr>
+                                <th>Kondisi:</th>
+                                <td>
+                                    @if (Asset.Kondisi == "Baik")
+                                    {
+                                        <span class="badge bg-success">@Asset.Kondisi</span>
+                                    }
+                                    else if (Asset.Kondisi == "Rusak Ringan")
+                                    {
+                                        <span class="badge bg-warning">@Asset.Kondisi</span>
+                                    }
+                                    else if (Asset.Kondisi == "Rusak Berat")
+                                    {
+                                        <span class="badge bg-danger">@Asset.Kondisi</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@(Asset.Kondisi ?? "-")</span>
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Organization -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <i class="bi bi-building"></i> Organisasi & Lokasi
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <th width="40%">SKPD:</th>
+                                <td>
+                                    <small class="text-muted">@Asset.SKPD.KodeSKPD</small><br />
+                                    @Asset.SKPD.NamaSKPD
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>UPB:</th>
+                                <td>@(Asset.UPB != null ? $"{Asset.UPB.KodeUPB} - {Asset.UPB.NamaUPB}" : "-")</td>
+                            </tr>
+                            <tr>
+                                <th>Kode Rekening:</th>
+                                <td>@Asset.KodeRekening</td>
+                            </tr>
+                            <tr>
+                                <th>Ruangan:</th>
+                                <td>@(Asset.Ruangan ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <th>Alamat:</th>
+                                <td>@(Asset.Alamat ?? "-")</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Acquisition Details -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="bi bi-cart-check"></i> Detail Perolehan
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <th width="40%">Tanggal Perolehan:</th>
+                                <td>@Asset.TanggalPerolehan.ToString("dd MMMM yyyy")</td>
+                            </tr>
+                            <tr>
+                                <th>Asal Usul:</th>
+                                <td>@(Asset.AsalUsul ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <th>Harga:</th>
+                                <td><strong class="text-primary">Rp @Asset.Harga.ToString("N0")</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Kode Barang:</th>
+                                <td>
+                                    <small class="text-muted">@Asset.KodeBarang.KodeBarang1</small><br />
+                                    @Asset.KodeBarang.NamaBarang
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Kontrak:</th>
+                                <td>@(Asset.Kontrak != null ? $"{Asset.Kontrak.NomorKontrak}" : "-")</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: Physical Specifications -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-rulers"></i> Spesifikasi Fisik (KIB @Asset.KIBType)
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless">
+                            @if (Asset.KIBType == KIBType.A || Asset.KIBType == KIBType.C ||
+                                 Asset.KIBType == KIBType.D || Asset.KIBType == KIBType.F)
+                            {
+                                @if (Asset.Luas.HasValue)
+                                {
+                                    <tr>
+                                        <th width="40%">Luas:</th>
+                                        <td>@Asset.Luas.Value.ToString("N2") m²</td>
+                                    </tr>
+                                }
+                                @if (Asset.Panjang.HasValue)
+                                {
+                                    <tr>
+                                        <th>Panjang:</th>
+                                        <td>@Asset.Panjang.Value.ToString("N2") m</td>
+                                    </tr>
+                                }
+                                @if (Asset.Lebar.HasValue)
+                                {
+                                    <tr>
+                                        <th>Lebar:</th>
+                                        <td>@Asset.Lebar.Value.ToString("N2") m</td>
+                                    </tr>
+                                }
+                            }
+
+                            @if (Asset.KIBType == KIBType.C && Asset.Tinggi.HasValue)
+                            {
+                                <tr>
+                                    <th>Tinggi:</th>
+                                    <td>@Asset.Tinggi.Value.ToString("N2") m</td>
+                                </tr>
+                            }
+
+                            @if ((Asset.KIBType == KIBType.B || Asset.KIBType == KIBType.E) && !string.IsNullOrEmpty(Asset.Merk))
+                            {
+                                <tr>
+                                    <th>Merk:</th>
+                                    <td>@Asset.Merk</td>
+                                </tr>
+                            }
+
+                            @if ((Asset.KIBType == KIBType.B || Asset.KIBType == KIBType.C ||
+                                  Asset.KIBType == KIBType.D || Asset.KIBType == KIBType.E) && !string.IsNullOrEmpty(Asset.Bahan))
+                            {
+                                <tr>
+                                    <th>Bahan:</th>
+                                    <td>@Asset.Bahan</td>
+                                </tr>
+                            }
+
+                            @if (Asset.KIBType == KIBType.B)
+                            {
+                                @if (!string.IsNullOrEmpty(Asset.NomorPabrik))
+                                {
+                                    <tr>
+                                        <th>Nomor Pabrik:</th>
+                                        <td>@Asset.NomorPabrik</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Asset.NomorRangka))
+                                {
+                                    <tr>
+                                        <th>Nomor Rangka:</th>
+                                        <td>@Asset.NomorRangka</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Asset.NomorMesin))
+                                {
+                                    <tr>
+                                        <th>Nomor Mesin:</th>
+                                        <td>@Asset.NomorMesin</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Asset.NomorPolisi))
+                                {
+                                    <tr>
+                                        <th>Nomor Polisi:</th>
+                                        <td><strong>@Asset.NomorPolisi</strong></td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Asset.NomorBPKB))
+                                {
+                                    <tr>
+                                        <th>Nomor BPKB:</th>
+                                        <td>@Asset.NomorBPKB</td>
+                                    </tr>
+                                }
+                            }
+                        </table>
+                        @if (string.IsNullOrEmpty(Asset.Merk) && string.IsNullOrEmpty(Asset.Bahan) &&
+                             !Asset.Luas.HasValue && !Asset.Panjang.HasValue)
+                        {
+                            <p class="text-muted fst-italic">Tidak ada spesifikasi fisik tercatat.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 5: Additional Information -->
+            @if (!string.IsNullOrEmpty(Asset.Keterangan))
+            {
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="bi bi-journal-text"></i> Keterangan Tambahan
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">@Asset.Keterangan</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Card 6: Metadata -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row text-muted small">
+                            <div class="col-md-6">
+                                <i class="bi bi-calendar-plus"></i> Dibuat: @Asset.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                @if (Asset.UpdatedAt.HasValue)
+                                {
+                                    <i class="bi bi-calendar-check"></i> <text>Diupdate: @Asset.UpdatedAt.Value.ToString("dd MMM yyyy HH:mm")</text>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (ShowDeleteConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Konfirmasi Hapus</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => ShowDeleteConfirm = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Apakah Anda yakin ingin menghapus aset ini?</p>
+                    <p class="mb-0"><strong>@Asset?.NamaBarang</strong></p>
+                    <p class="text-muted small">Nomor Register: @Asset?.NomorRegister</p>
+                    <p class="text-warning"><strong>Catatan:</strong> Data tidak akan dihapus permanen, hanya dinonaktifkan.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => ShowDeleteConfirm = false">Batal</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteAsset" disabled="@IsDeleting">
+                        @if (IsDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Hapus
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Asset? Asset { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private bool ShowDeleteConfirm { get; set; }
+    private bool IsDeleting { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsset();
+    }
+
+    private async Task LoadAsset()
+    {
+        IsLoading = true;
+        Asset = await AssetService.GetAssetByIdAsync(Id);
+        IsLoading = false;
+    }
+
+    private async Task DeleteAsset()
+    {
+        IsDeleting = true;
+
+        try
+        {
+            await AssetService.DeleteAssetAsync(Id);
+            await JS.InvokeVoidAsync("alert", "Aset berhasil dihapus!");
+            NavigationManager.NavigateTo("/pengelola-barang/saldo-awal");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsDeleting = false;
+            ShowDeleteConfirm = false;
+        }
+    }
+}

@@ -1,0 +1,29 @@
+@page "/pengelola-barang/admin/kode-rekening"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@layout PengelolaBarangLayout
+
+<PageTitle>Kode Rekening</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 mb-0">Kode Rekening</h1>
+            <p class="text-muted">Kelola master kode rekening aset daerah</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Tambah Kode Rekening
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-list-ol display-1 text-muted"></i>
+            <h3 class="mt-3">Halaman Dalam Pengembangan</h3>
+            <p class="text-muted">Fitur kode rekening akan tersedia segera</p>
+            <p class="small text-muted">Halaman ini akan menampilkan form dan daftar master kode rekening untuk aset daerah</p>
+        </div>
+    </div>
+</div>

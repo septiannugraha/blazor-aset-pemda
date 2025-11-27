@@ -1,0 +1,154 @@
+@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">BMD - Pengguna Barang</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="pengguna-barang/dashboard" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="pengguna-barang/data-umum">
+                <span class="bi bi-info-circle" aria-hidden="true"></span> Data Umum
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="pengguna-barang/assets">
+                <span class="bi bi-box-seam" aria-hidden="true"></span> Daftar Aset
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <span class="bi bi-archive" aria-hidden="true"></span> Saldo Awal
+            </div>
+            <div class="ps-4">
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/kib-a">KIB A</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/kib-b">KIB B</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/kib-c">KIB C</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/kib-d">KIB D</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/kib-e">KIB E</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/kib-f">KIB F</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/saldo-awal/lainnya">Lainnya</NavLink>
+            </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <span class="bi bi-cart" aria-hidden="true"></span> Belanja Modal
+            </div>
+            <div class="ps-4">
+                <NavLink class="nav-link" href="pengguna-barang/belanja-modal/kontrak">Kontrak/Rincian Kontrak</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/belanja-modal/paket-pengguna">Paket Pengguna</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/belanja-modal/jenis-belanja">Jenis Belanja</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/belanja-modal/rincian-barang">Rincian Barang</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/belanja-modal/bast-distribusi">BAST dan Distribusi</NavLink>
+            </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <span class="bi bi-check-circle" aria-hidden="true"></span> Inventarisasi, Pemanfaatan & Penghapusan
+            </div>
+            <div class="ps-4">
+                <NavLink class="nav-link" href="pengguna-barang/inventarisasi/ba-cek-fisik">BA Cek Fisik</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/inventarisasi/rekapitulasi">Rekapitulasi Hasil</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/inventarisasi/usulan-penghapusan">Usulan Penghapusan</NavLink>
+            </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <span class="bi bi-shield-check" aria-hidden="true"></span> Pengamanan & Pemeliharaan
+            </div>
+            <div class="ps-4">
+                <NavLink class="nav-link" href="pengguna-barang/pengamanan/sertifikat-tanah">Sertifikat Tanah</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/pengamanan/imb-slf">IMB dan SLF</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/pengamanan/kendaraan-dinas">Kendaraan Dinas</NavLink>
+            </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Rekonsiliasi
+            </div>
+            <div class="ps-4">
+                <NavLink class="nav-link" href="pengguna-barang/rekonsiliasi/bm-bhp">BM-BHP</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/rekonsiliasi/bm-ekstra">BM-Ekstra</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/rekonsiliasi/kapitalisasi">Kapitalisasi BPBJ</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/rekonsiliasi/saldo-akhir">Perhitungan Saldo Akhir</NavLink>
+            </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <span class="bi bi-calculator" aria-hidden="true"></span> Penyusutan
+            </div>
+            <div class="ps-4">
+                <NavLink class="nav-link" href="pengguna-barang/penyusutan/kib-b">KIB B</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/penyusutan/kib-c">KIB C</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/penyusutan/kib-d">KIB D</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/penyusutan/kib-e">KIB E</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/penyusutan/kib-f">KIB F</NavLink>
+                <NavLink class="nav-link" href="pengguna-barang/penyusutan/lainnya">Lainnya</NavLink>
+            </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="pengguna-barang/laporan">
+                <span class="bi bi-file-earmark-pdf" aria-hidden="true"></span> Laporan BMD
+            </NavLink>
+        </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Manage">
+                        <span class="bi bi-person-fill" aria-hidden="true"></span> @context.User.Identity?.Name
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
