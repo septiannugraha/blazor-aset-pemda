@@ -182,12 +182,15 @@
             query = query.Where(a => a.Tahun <= FilteredTahun);
         }
 
-        // Get statistics
-        TotalAssets = await query.CountAsync();
-        TotalValue = await query.SumAsync(a => (decimal?)a.Harga) ?? 0;
+        // Load assets to memory for SQLite-compatible aggregation
+        var assets = await query.ToListAsync();
 
-        // Get assets by KIB
-        AssetsByKIB = await query
+        // Get statistics (client-side aggregation for SQLite compatibility)
+        TotalAssets = assets.Count;
+        TotalValue = assets.Sum(a => a.Harga);
+
+        // Get assets by KIB (client-side)
+        AssetsByKIB = assets
             .GroupBy(a => a.KIBType)
             .Select(g => new AssetByKIB
             {
@@ -196,7 +199,7 @@
                 TotalValue = g.Sum(a => a.Harga)
             })
             .OrderBy(a => a.KIBType)
-            .ToListAsync();
+            .ToList();
 
         // Get active contracts
         var contractQuery = context.Kontraks.AsQueryable();
@@ -229,7 +232,7 @@
             .Take(5)
             .ToListAsync();
 
-        // Get current year depreciation
+        // Get current year depreciation (load and aggregate client-side)
         var depreciationQuery = context.Depreciations
             .Where(d => d.Tahun == DateTime.Now.Year);
 
@@ -240,7 +243,8 @@
                 .Where(d => d.Asset.UpbId == FilteredPenggunaBarangId.Value);
         }
 
-        CurrentYearDepreciation = await depreciationQuery.SumAsync(d => (decimal?)d.NilaiPenyusutan) ?? 0;
+        var depreciations = await depreciationQuery.ToListAsync();
+        CurrentYearDepreciation = depreciations.Sum(d => d.NilaiPenyusutan);
     }
 
     public class AssetByKIB

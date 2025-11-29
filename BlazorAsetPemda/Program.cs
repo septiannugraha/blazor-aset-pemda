@@ -31,13 +31,31 @@ public class Program
             .AddIdentityCookies();
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        var useSqlite = connectionString.Contains("Data Source=") && !connectionString.Contains("Server=");
 
         // Register both DbContext (for Identity) and DbContextFactory (for components)
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
+        if (useSqlite)
+        {
+            // Ensure data directory exists for SQLite
+            var dataSource = connectionString.Replace("Data Source=", "");
+            var directory = Path.GetDirectoryName(dataSource);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-        builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlite(connectionString));
+            builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+                options.UseSqlite(connectionString), ServiceLifetime.Scoped);
+        }
+        else
+        {
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(connectionString));
+            builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+                options.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+        }
 
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

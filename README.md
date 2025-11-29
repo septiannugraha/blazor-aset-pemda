@@ -252,19 +252,61 @@ dotnet test
 
 ## Deployment
 
-### Prerequisites for Production
+### Docker Deployment (Recommended)
+
+Deploy with a single command using Docker Compose:
+
+1. **Copy files to server**:
+
+   ```bash
+   scp -r . user@your-server:/path/to/app/
+   ```
+
+2. **Create environment file**:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env and set a strong password
+   nano .env
+   ```
+
+3. **Start the application**:
+
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access the application**:
+   - URL: `http://your-server:5000`
+   - Login: `pengelola@bmd.local` / `Pengelola123`
+
+5. **View logs**:
+
+   ```bash
+   docker-compose logs -f blazor-app
+   ```
+
+6. **Stop the application**:
+
+   ```bash
+   docker-compose down
+   ```
+
+### Manual Deployment
+
+#### Prerequisites for Production
 
 1. Windows Server with IIS or Linux with Nginx/Apache
 2. SQL Server 2019 or later
 3. .NET 8 Runtime
 
-### Publish the Application
+#### Publish the Application
 
 ```bash
 dotnet publish -c Release -o ./publish
 ```
 
-### IIS Deployment
+#### IIS Deployment
 
 1. Install the .NET 8 Hosting Bundle
 2. Create an application pool with "No Managed Code"

@@ -218,7 +218,13 @@
     private async Task LoadDashboardData()
     {
         using var context = await DbFactory.CreateDbContextAsync();
-        var query = context.Assets.AsQueryable();
+
+        // Build base query with filters
+        var query = context.Assets
+            .Include(a => a.SKPD)
+            .Include(a => a.Depreciations)
+            .Include(a => a.Kontrak)
+            .AsQueryable();
 
         // Apply filters
         if (FilteredPenggunaBarangId.HasValue)
@@ -235,13 +241,16 @@
             query = query.Where(a => a.Tahun <= FilteredTahun);
         }
 
-        // Get statistics
-        TotalAssets = await query.CountAsync();
-        TotalValue = await query.SumAsync(a => (decimal?)a.Harga) ?? 0;
+        // Load assets to memory for SQLite-compatible aggregation
+        var assets = await query.ToListAsync();
+
+        // Get statistics (client-side aggregation for SQLite compatibility)
+        TotalAssets = assets.Count;
+        TotalValue = assets.Sum(a => a.Harga);
         TotalSKPD = await context.SKPDs.Where(s => s.IsActive).CountAsync();
 
-        // Get assets by KIB with depreciation
-        AssetsByKIB = await query
+        // Get assets by KIB with depreciation (client-side)
+        AssetsByKIB = assets
             .GroupBy(a => a.KIBType)
             .Select(g => new AssetByKIB
             {
@@ -253,47 +262,49 @@
                     .Sum(d => d.AkumulasiPenyusutan)
             })
             .OrderBy(a => a.KIBType)
-            .ToListAsync();
+            .ToList();
 
-        // Get top SKPDs
-        TopSKPDs = await query
-            .GroupBy(a => a.SKPD)
+        // Get top SKPDs (client-side)
+        TopSKPDs = assets
+            .Where(a => a.SKPD != null)
+            .GroupBy(a => a.SKPD!.NamaSKPD)
             .Select(g => new TopSKPD
             {
-                NamaSKPD = g.Key.NamaSKPD,
+                NamaSKPD = g.Key,
                 TotalAssets = g.Count(),
                 TotalValue = g.Sum(a => a.Harga)
             })
             .OrderByDescending(s => s.TotalValue)
             .Take(5)
+            .ToList();
+
+        // Get belanja modal monitoring (load data first, then aggregate client-side)
+        var skpdsWithAssets = await context.SKPDs
+            .Where(s => s.IsActive)
+            .Include(s => s.Assets.Where(a => a.Tahun == FilteredTahun))
+                .ThenInclude(a => a.Kontrak)
             .ToListAsync();
 
-        // Get belanja modal monitoring
-        BelanjaModalMonitoring = await context.SKPDs
-            .Where(s => s.IsActive)
+        BelanjaModalMonitoring = skpdsWithAssets
             .Select(s => new BelanjaModalMonitoringItem
             {
                 NamaSKPD = s.NamaSKPD,
                 JumlahKontrak = s.Assets
-                    .Where(a => a.Tahun == FilteredTahun && a.KontrakId != null)
+                    .Where(a => a.KontrakId != null)
                     .Select(a => a.KontrakId)
                     .Distinct()
                     .Count(),
                 NilaiKontrak = s.Assets
-                    .Where(a => a.Tahun == FilteredTahun && a.Kontrak != null)
-                    .Select(a => a.Kontrak!.NilaiKontrak)
-                    .Sum(),
-                JumlahAset = s.Assets
-                    .Count(a => a.Tahun == FilteredTahun),
-                NilaiTersalur = s.Assets
-                    .Where(a => a.Tahun == FilteredTahun)
-                    .Sum(a => a.Harga)
+                    .Where(a => a.Kontrak != null)
+                    .Sum(a => a.Kontrak!.NilaiKontrak),
+                JumlahAset = s.Assets.Count,
+                NilaiTersalur = s.Assets.Sum(a => a.Harga)
             })
             .Where(s => s.JumlahKontrak > 0 || s.JumlahAset > 0)
             .OrderByDescending(s => s.NilaiKontrak)
-            .ToListAsync();
+            .ToList();
 
-        // Get current year depreciation
+        // Get current year depreciation (load and aggregate client-side)
         var depreciationQuery = context.Depreciations
             .Where(d => d.Tahun == DateTime.Now.Year);
 
@@ -304,7 +315,8 @@
                 .Where(d => d.Asset.UpbId == FilteredPenggunaBarangId.Value);
         }
 
-        CurrentYearDepreciation = await depreciationQuery.SumAsync(d => (decimal?)d.NilaiPenyusutan) ?? 0;
+        var depreciations = await depreciationQuery.ToListAsync();
+        CurrentYearDepreciation = depreciations.Sum(d => d.NilaiPenyusutan);
     }
 
     public class AssetByKIB

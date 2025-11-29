@@ -15,7 +15,16 @@ public static class SeedData
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
         // Ensure database is created
-        await context.Database.MigrateAsync();
+        // Use EnsureCreated for SQLite (migrations are SQL Server specific)
+        // Use MigrateAsync for SQL Server
+        if (context.Database.IsSqlite())
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
 
         // Seed roles
         await SeedRolesAsync(roleManager);

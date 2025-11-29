@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  # Blazor BMD Application (with SQLite)
+  blazor-app:
+    build:
+      context: ./BlazorAsetPemda
+      dockerfile: Dockerfile
+    container_name: bmd-app
+    environment:
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/BlazorAsetPemda.db
+      - ASPNETCORE_ENVIRONMENT=Production
+      - USE_SQLITE=true
+    ports:
+      - "5000:80"
+    volumes:
+      - app-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  app-data:
