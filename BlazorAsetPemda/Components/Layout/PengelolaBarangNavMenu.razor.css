@@ -15,10 +15,7 @@
     background-color: rgba(255, 255, 255, 0.5);
 }
 
-.top-row {
-    height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
-}
+/* Sidebar header styles are in the component */
 
 .navbar-brand {
     font-size: 1.1rem;
@@ -121,8 +118,8 @@
         /* Never collapse the sidebar for wide screens */
         display: block;
 
-        /* Allow sidebar to scroll for tall menus */
-        height: calc(100vh - 3.5rem);
+        /* Allow sidebar to scroll for tall menus - account for header with logo */
+        height: calc(100vh - 140px);
         overflow-y: auto;
     }
 }

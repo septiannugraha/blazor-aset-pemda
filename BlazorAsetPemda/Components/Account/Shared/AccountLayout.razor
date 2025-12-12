@@ -1,10 +1,14 @@
-﻿@inherits LayoutComponentBase
-@layout BlazorAsetPemda.Components.Layout.MainLayout
+@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 
+@* Login pages use their own layout without sidebar *@
 @if (HttpContext is null)
 {
-    <p>Loading...</p>
+    <div class="d-flex justify-content-center align-items-center min-vh-100">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Memuat...</span>
+        </div>
+    </div>
 }
 else
 {
@@ -19,9 +23,6 @@ else
     {
         if (HttpContext is null)
         {
-            // If this code runs, we're currently rendering in interactive mode, so there is no HttpContext.
-            // The identity pages need to set cookies, so they require an HttpContext. To achieve this we
-            // must transition back from interactive mode to a server-rendered page.
             NavigationManager.Refresh(forceReload: true);
         }
     }

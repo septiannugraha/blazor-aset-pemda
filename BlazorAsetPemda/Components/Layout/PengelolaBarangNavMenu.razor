@@ -1,181 +1,224 @@
+@rendermode InteractiveServer
 @implements IDisposable
 @inject NavigationManager NavigationManager
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">BMD - Pengelola Barang</a>
-    </div>
+<div class="sidebar-header">
+    <a class="navbar-brand d-flex flex-column align-items-center text-center" href="">
+        <img src="/images/logo.png" alt="Logo" class="sidebar-logo" />
+        <div class="brand-text">
+            <small class="pemda-name d-block">PEMERINTAH KABUPATEN</small>
+            <small class="pemda-name d-block">LABUHANBATU SELATAN</small>
+            <span class="app-name">SIAP BMD</span>
+            <span class="tahun-anggaran">TA @DateTime.Now.Year</span>
+        </div>
+    </a>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox" title="Menu navigasi" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
+        @* Dashboard *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="pengelola-barang/dashboard" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Dashboard
+                <span class="bi bi-speedometer2" aria-hidden="true"></span> Dashboard
             </NavLink>
         </div>
 
+        @* Administrasi - Contains all data management menus *@
         <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#dataUmumMenu">
-                <span class="bi bi-info-circle" aria-hidden="true"></span> Data Umum
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse show" id="dataUmumMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/data-umum/skpd">SKPD</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/data-umum/upb">UPB</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/data-umum/kode-barang">Kode Barang</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/data-umum/kode-rekening">Kode Rekening</NavLink>
+            <a class="nav-link" @onclick="ToggleAdministrasi" @onclick:preventDefault>
+                <span class="bi bi-folder" aria-hidden="true"></span> Administrasi
+                <span class="bi @(IsAdministrasiExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsAdministrasiExpanded ? "show" : "")">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/data-umum/skpd">
+                            <span class="bi bi-building" aria-hidden="true"></span> SKPD
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/data-umum/upb">
+                            <span class="bi bi-diagram-3" aria-hidden="true"></span> UPB
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/data-umum/kode-barang">
+                            <span class="bi bi-upc-scan" aria-hidden="true"></span> Kode Barang
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/data-umum/kode-rekening">
+                            <span class="bi bi-journal-text" aria-hidden="true"></span> Kode Rekening
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/saldo-awal">
+                            <span class="bi bi-archive" aria-hidden="true"></span> Saldo Awal
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/belanja-modal/kontrak">
+                            <span class="bi bi-cart" aria-hidden="true"></span> Belanja Modal
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/status-pengguna/penetapan">
+                            <span class="bi bi-person-badge" aria-hidden="true"></span> Status Pengguna
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/inventarisasi/inventaris-awal">
+                            <span class="bi bi-clipboard-check" aria-hidden="true"></span> Inventarisasi
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/pengamanan/sertifikat-tanah">
+                            <span class="bi bi-shield-check" aria-hidden="true"></span> Pengamanan
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/pemanfaatan/sk-pemanfaatan">
+                            <span class="bi bi-briefcase" aria-hidden="true"></span> Pemanfaatan
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penghapusan/usulan">
+                            <span class="bi bi-trash" aria-hidden="true"></span> Penghapusan
+                        </NavLink>
+                    </div>
                 </div>
             </div>
         </div>
 
+        @* Penyusutan *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="pengelola-barang/saldo-awal">
-                <span class="bi bi-archive" aria-hidden="true"></span> Saldo Awal
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#belanjaModalMenu">
-                <span class="bi bi-cart" aria-hidden="true"></span> Belanja Modal
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="belanjaModalMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/belanja-modal/kontrak">Kontrak/Rincian Kontrak</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/belanja-modal/paket-pengguna">Paket Pengguna</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/belanja-modal/jenis-belanja">Jenis Belanja</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/belanja-modal/rincian-barang">Rincian Barang</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/belanja-modal/bast-distribusi">BAST dan Distribusi</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/belanja-modal/monitoring">Monitoring</NavLink>
+            <a class="nav-link" @onclick="TogglePenyusutan" @onclick:preventDefault>
+                <span class="bi bi-graph-down" aria-hidden="true"></span> Penyusutan
+                <span class="bi @(IsPenyusutanExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsPenyusutanExpanded ? "show" : "")">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/rekapitulasi">
+                            <span class="bi bi-table" aria-hidden="true"></span> Rekapitulasi
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-b">
+                            <span class="bi bi-box" aria-hidden="true"></span> KIB B
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-c">
+                            <span class="bi bi-building" aria-hidden="true"></span> KIB C
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-d">
+                            <span class="bi bi-signpost" aria-hidden="true"></span> KIB D
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-e">
+                            <span class="bi bi-water" aria-hidden="true"></span> KIB E
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-f">
+                            <span class="bi bi-hammer" aria-hidden="true"></span> KIB F
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/lainnya">
+                            <span class="bi bi-three-dots" aria-hidden="true"></span> Lainnya
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/penyusutan/monitoring">
+                            <span class="bi bi-eye" aria-hidden="true"></span> Monitoring
+                        </NavLink>
+                    </div>
                 </div>
             </div>
         </div>
 
+        @* Pelaporan *@
         <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#statusPenggunaMenu">
-                <span class="bi bi-gear" aria-hidden="true"></span> Status Pengguna
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="statusPenggunaMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/status-pengguna/penetapan">Penetapan Status</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/status-pengguna/pengembalian">Pengembalian Status</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/status-pengguna/mutasi">Mutasi</NavLink>
+            <a class="nav-link" @onclick="TogglePelaporan" @onclick:preventDefault>
+                <span class="bi bi-file-earmark-bar-graph" aria-hidden="true"></span> Pelaporan
+                <span class="bi @(IsPelaporanExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsPelaporanExpanded ? "show" : "")">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/laporan/kib">
+                            <span class="bi bi-file-text" aria-hidden="true"></span> Laporan KIB
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/laporan/bmd">
+                            <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Laporan BMD
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/laporan/penyusutan">
+                            <span class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></span> Laporan Penyusutan
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/laporan/rekonsiliasi">
+                            <span class="bi bi-file-earmark-check" aria-hidden="true"></span> Rekonsiliasi
+                        </NavLink>
+                    </div>
                 </div>
             </div>
         </div>
 
+        @* Admin *@
         <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#inventarisasiMenu">
-                <span class="bi bi-clipboard-check" aria-hidden="true"></span> Inventarisasi
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="inventarisasiMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/inventarisasi/inventaris-awal">Inventaris Awal</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/inventarisasi/inventarisasi-fisik">Inventarisasi Fisik</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/inventarisasi/rekapitulasi">Rekapitulasi Hasil</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/inventarisasi/penentuan-tl">Penentuan TL</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/inventarisasi/monitoring-tl">Monitoring TL</NavLink>
+            <a class="nav-link" @onclick="ToggleAdmin" @onclick:preventDefault>
+                <span class="bi bi-gear" aria-hidden="true"></span> Admin
+                <span class="bi @(IsAdminExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsAdminExpanded ? "show" : "")">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/admin/pengguna-barang">
+                            <span class="bi bi-people" aria-hidden="true"></span> Pengguna & UPB
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/admin/kebijakan-akuntansi">
+                            <span class="bi bi-sliders" aria-hidden="true"></span> Kebijakan Akuntansi
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="pengelola-barang/admin/excel-import">
+                            <span class="bi bi-upload" aria-hidden="true"></span> Import Data
+                        </NavLink>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#pengamananMenu">
-                <span class="bi bi-shield-check" aria-hidden="true"></span> Pengamanan & Pemeliharaan
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="pengamananMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/pengamanan/sertifikat-tanah">Sertifikat Tanah</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/pengamanan/imb-slf">IMB dan SLF</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/pengamanan/kendaraan-dinas">Kendaraan Dinas</NavLink>
-                </div>
-            </div>
-        </div>
+        <hr class="mx-3 my-2" style="border-color: rgba(255,255,255,0.2);" />
 
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#pemanfaatanMenu">
-                <span class="bi bi-briefcase" aria-hidden="true"></span> Pemanfaatan
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="pemanfaatanMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/pemanfaatan/sk-pemanfaatan">SK Pemanfaatan</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/pemanfaatan/ba-pemanfaatan">BA Pemanfaatan</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/pemanfaatan/monitoring">Monitoring</NavLink>
-                </div>
-            </div>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#penghapusanMenu">
-                <span class="bi bi-trash" aria-hidden="true"></span> Penghapusan
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="penghapusanMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/penghapusan/usulan">Usulan Penghapusan</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penghapusan/penaksiran">Penaksiran dan Penilaian</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penghapusan/penjualan">Penjualan</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penghapusan/pemusnahan">Pemusnahan</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penghapusan/sk-penghapusan">SK Penghapusan</NavLink>
-                </div>
-            </div>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#penyusutanMenu">
-                <span class="bi bi-calculator" aria-hidden="true"></span> Penyusutan
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="penyusutanMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-b">KIB B</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-c">KIB C</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-d">KIB D</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-e">KIB E</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/kib-f">KIB F</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/lainnya">Lainnya</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/penyusutan/monitoring">Monitoring</NavLink>
-                </div>
-            </div>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold cursor-pointer" data-bs-toggle="collapse" data-bs-target="#adminMenu">
-                <span class="bi bi-tools" aria-hidden="true"></span> Admin
-                <span class="bi bi-chevron-down float-end"></span>
-            </div>
-            <div class="collapse" id="adminMenu">
-                <div class="ps-4">
-                    <NavLink class="nav-link" href="pengelola-barang/admin/pengguna-barang">Pengguna Barang dan UPB</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/admin/kebijakan-akuntansi">Kebijakan Akuntansi</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/admin/kode-barang">Kode Barang</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/admin/kode-rekening">Kode Rekening</NavLink>
-                    <NavLink class="nav-link" href="pengelola-barang/admin/excel-import">Import Data Excel</NavLink>
-                </div>
-            </div>
-        </div>
-
+        @* User Info & Logout *@
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill" aria-hidden="true"></span> @context.User.Identity?.Name
+                        <span class="bi bi-person-circle" aria-hidden="true"></span> @context.User.Identity?.Name
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left" aria-hidden="true"></span> Logout
+                        <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start">
+                            <span class="bi bi-box-arrow-left" aria-hidden="true"></span> Keluar
                         </button>
                     </form>
                 </div>
@@ -184,20 +227,123 @@
     </nav>
 </div>
 
+<style>
+    .sidebar-header {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+        padding: 20px 15px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-header .navbar-brand {
+        color: white;
+        text-decoration: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .sidebar-logo {
+        width: 70px;
+        height: auto;
+        margin-bottom: 10px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    .brand-text {
+        line-height: 1.3;
+    }
+
+    .brand-text .pemda-name {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.85);
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+
+    .brand-text .app-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffd700;
+        display: block;
+        margin-top: 5px;
+    }
+
+    .brand-text .tahun-anggaran {
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        display: block;
+        margin-top: 8px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+    }
+
+    .nav-submenu {
+        border-left: 2px solid rgba(255, 255, 255, 0.2);
+        margin-left: 10px;
+    }
+
+    .nav-submenu .nav-link {
+        padding: 8px 15px;
+        font-size: 0.85rem;
+    }
+
+    .nav-submenu .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+    }
+</style>
+
 @code {
     private string? currentUrl;
+    private bool IsAdministrasiExpanded = true;
+    private bool IsPenyusutanExpanded = false;
+    private bool IsPelaporanExpanded = false;
+    private bool IsAdminExpanded = false;
 
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+        ExpandMenuBasedOnUrl(currentUrl);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        ExpandMenuBasedOnUrl(currentUrl);
         StateHasChanged();
     }
+
+    private void ExpandMenuBasedOnUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+
+        if (url.Contains("data-umum") || url.Contains("saldo-awal") || url.Contains("belanja-modal") ||
+            url.Contains("status-pengguna") || url.Contains("inventarisasi") || url.Contains("pengamanan") ||
+            url.Contains("pemanfaatan") || url.Contains("penghapusan"))
+        {
+            IsAdministrasiExpanded = true;
+        }
+        else if (url.Contains("penyusutan"))
+        {
+            IsPenyusutanExpanded = true;
+        }
+        else if (url.Contains("laporan"))
+        {
+            IsPelaporanExpanded = true;
+        }
+        else if (url.Contains("admin"))
+        {
+            IsAdminExpanded = true;
+        }
+    }
+
+    private void ToggleAdministrasi() => IsAdministrasiExpanded = !IsAdministrasiExpanded;
+    private void TogglePenyusutan() => IsPenyusutanExpanded = !IsPenyusutanExpanded;
+    private void TogglePelaporan() => IsPelaporanExpanded = !IsPelaporanExpanded;
+    private void ToggleAdmin() => IsAdminExpanded = !IsAdminExpanded;
 
     public void Dispose()
     {
