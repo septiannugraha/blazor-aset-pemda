@@ -1,4 +1,4 @@
-﻿@page "/Account/Login"
+@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
@@ -10,62 +10,239 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Masuk - SIAP BMD</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <StatusMessage Message="@errorMessage" />
-            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-                <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label for="email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+<style>
+    .login-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1e3c72 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .login-container {
+        width: 100%;
+        max-width: 450px;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+
+    .login-header {
+        background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+        color: white;
+        padding: 40px 30px;
+        text-align: center;
+    }
+
+    .login-logo {
+        margin: 0 auto 20px;
+    }
+
+    .login-logo img {
+        max-width: 100px;
+        height: auto;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    }
+
+    .pemda-name {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 5px;
+        opacity: 0.9;
+    }
+
+    .app-title {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.4;
+        margin: 0;
+    }
+
+    .tahun-anggaran {
+        display: inline-block;
+        margin-top: 15px;
+        padding: 6px 16px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #ffd700;
+    }
+
+    .login-body {
+        padding: 40px 30px;
+    }
+
+    .form-floating {
+        margin-bottom: 20px;
+    }
+
+    .form-floating .form-select {
+        border-radius: 10px;
+        border: 2px solid #1565c0;
+        padding: 20px 15px 8px;
+        height: 60px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background-color: #f0f7ff;
+    }
+
+    .form-floating .form-select:focus {
+        border-color: #0d47a1;
+        box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.2);
+        background-color: white;
+    }
+
+    .form-floating .form-control {
+        border-radius: 10px;
+        border: 2px solid #e0e0e0;
+        padding: 20px 15px 8px;
+        height: 60px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .form-floating .form-control:focus {
+        border-color: #1565c0;
+        box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+    }
+
+    .form-floating label {
+        padding: 20px 15px;
+        color: #757575;
+    }
+
+    .form-check {
+        margin-bottom: 25px;
+    }
+
+    .form-check-input:checked {
+        background-color: #1565c0;
+        border-color: #1565c0;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 15px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(21, 101, 192, 0.4);
+        background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    }
+
+    .login-footer {
+        text-align: center;
+        padding: 20px 30px 30px;
+        color: #757575;
+        font-size: 13px;
+    }
+
+    .login-footer a {
+        color: #1565c0;
+        text-decoration: none;
+    }
+
+    .login-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .alert-danger {
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .year-text {
+        margin-top: 20px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 13px;
+        text-align: center;
+    }
+</style>
+
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <img src="/images/logo.png" alt="Logo Kabupaten Labuhanbatu Selatan" />
                 </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </EditForm>
-        </section>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
+                <p class="pemda-name">PEMERINTAH KABUPATEN LABUHANBATU SELATAN</p>
+                <h1 class="app-title">Sistem Informasi Administrasi<br/>dan Penyusutan Barang Milik Daerah</h1>
+            </div>
+
+            <div class="login-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i>@errorMessage
+                    </div>
+                }
+
+                <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+
+                    <div class="form-floating mb-3">
+                        <InputSelect @bind-Value="Input.TahunAnggaran" class="form-select" id="tahunAnggaran">
+                            @foreach (var year in AvailableYears)
+                            {
+                                <option value="@year">@year</option>
+                            }
+                        </InputSelect>
+                        <label for="tahunAnggaran"><i class="bi bi-calendar me-2"></i>Tahun Anggaran</label>
+                    </div>
+
+                    <div class="form-floating">
+                        <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="Email" id="email" />
+                        <label for="email"><i class="bi bi-envelope me-2"></i>Email</label>
+                        <ValidationMessage For="() => Input.Email" class="text-danger small" />
+                    </div>
+
+                    <div class="form-floating">
+                        <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Kata Sandi" id="password" />
+                        <label for="password"><i class="bi bi-lock me-2"></i>Kata Sandi</label>
+                        <ValidationMessage For="() => Input.Password" class="text-danger small" />
+                    </div>
+
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" id="rememberMe" />
+                        <label class="form-check-label" for="rememberMe">Ingat saya</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-login">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Masuk
+                    </button>
+                </EditForm>
+            </div>
+
+            <div class="login-footer">
+                <a href="Account/ForgotPassword">Lupa kata sandi?</a>
+            </div>
+        </div>
+
+        <p class="year-text">&copy; @DateTime.Now.Year - SIAP BMD Labuhanbatu Selatan</p>
     </div>
 </div>
 
 @code {
     private string? errorMessage;
+    private List<int> AvailableYears = Enumerable.Range(DateTime.Now.Year - 5, 7).Reverse().ToList();
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -80,19 +257,22 @@
     {
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+
+        // Set default year to current year
+        if (Input.TahunAnggaran == 0)
+        {
+            Input.TahunAnggaran = DateTime.Now.Year;
         }
     }
 
     public async Task LoginUser()
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
-            Logger.LogInformation("User logged in.");
+            Logger.LogInformation("Pengguna berhasil masuk.");
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
@@ -103,26 +283,30 @@
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
+            Logger.LogWarning("Akun pengguna terkunci.");
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            errorMessage = "Email atau kata sandi salah.";
         }
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Tahun anggaran wajib dipilih")]
+        [Display(Name = "Tahun Anggaran")]
+        public int TahunAnggaran { get; set; } = DateTime.Now.Year;
+
+        [Required(ErrorMessage = "Email wajib diisi")]
+        [EmailAddress(ErrorMessage = "Format email tidak valid")]
         public string Email { get; set; } = "";
 
-        [Required]
+        [Required(ErrorMessage = "Kata sandi wajib diisi")]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "Ingat saya")]
         public bool RememberMe { get; set; }
     }
 }

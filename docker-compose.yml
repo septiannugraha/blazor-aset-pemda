@@ -1,21 +1,41 @@
 version: '3.8'
 
 services:
-  # Blazor BMD Application (with SQLite)
+  # SQL Server 2022 Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bmd-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Passw0rd123}
+      - MSSQL_PID=Developer  # Use 'Express' for free production, 'Developer' for dev/test
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${SA_PASSWORD:-YourStrong@Passw0rd123}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Blazor BMD Application
   blazor-app:
     build:
       context: ./BlazorAsetPemda
       dockerfile: Dockerfile
     container_name: bmd-app
     environment:
-      - ConnectionStrings__DefaultConnection=Data Source=/app/data/BlazorAsetPemda.db
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=BlazorAsetPemdaDb;User Id=sa;Password=${SA_PASSWORD:-YourStrong@Passw0rd123};TrustServerCertificate=True;MultipleActiveResultSets=true
       - ASPNETCORE_ENVIRONMENT=Production
-      - USE_SQLITE=true
     ports:
       - "5000:80"
-    volumes:
-      - app-data:/app/data
+    depends_on:
+      sqlserver:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  app-data:
+  sqlserver-data:

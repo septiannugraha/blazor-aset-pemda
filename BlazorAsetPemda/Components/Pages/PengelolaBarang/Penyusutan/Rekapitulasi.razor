@@ -1,0 +1,204 @@
+@page "/pengelola-barang/penyusutan/rekapitulasi"
+@attribute [Authorize(Roles = "PengelolaBarang,Admin")]
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Rekapitulasi Penyusutan - SIAP BMD</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Rekapitulasi Penyusutan</h3>
+            <p class="text-muted mb-0">Tahun Anggaran @TahunAnggaran</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" @onclick="ExportExcel">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="PrintReport">
+                <i class="bi bi-printer me-1"></i> Cetak
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-table me-2"></i>
+                Rekapitulasi Nilai Aset dan Penyusutan per Jenis Aset
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center" style="width: 300px;">Jenis Aset</th>
+                            <th class="text-center">Nilai Perolehan (Rp)</th>
+                            <th class="text-center">Beban Penyusutan (Rp)</th>
+                            <th class="text-center">Akumulasi Penyusutan (Rp)</th>
+                            <th class="text-center">Nilai Buku (Rp)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in DataRekapitulasi)
+                        {
+                            var rowClass = item.Level switch
+                            {
+                                0 => "table-primary fw-bold",
+                                1 => "table-light fw-semibold",
+                                _ => ""
+                            };
+                            var indent = item.Level * 20;
+
+                            <tr class="@rowClass">
+                                <td style="padding-left: @(indent + 12)px;">@item.JenisAset</td>
+                                <td class="text-end">@FormatCurrency(item.NilaiPerolehan)</td>
+                                <td class="text-end text-danger">@FormatCurrency(item.BebanPenyusutan)</td>
+                                <td class="text-end text-danger">@FormatCurrency(item.AkumulasiPenyusutan)</td>
+                                <td class="text-end text-success fw-semibold">@FormatCurrency(item.NilaiBuku)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-dark">
+                        <tr class="fw-bold">
+                            <td class="text-center">GRAND TOTAL</td>
+                            <td class="text-end">@FormatCurrency(GrandTotal.NilaiPerolehan)</td>
+                            <td class="text-end">@FormatCurrency(GrandTotal.BebanPenyusutan)</td>
+                            <td class="text-end">@FormatCurrency(GrandTotal.AkumulasiPenyusutan)</td>
+                            <td class="text-end">@FormatCurrency(GrandTotal.NilaiBuku)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Total Nilai Perolehan</h6>
+                            <h4 class="card-title mb-0">@FormatCurrencyShort(GrandTotal.NilaiPerolehan)</h4>
+                        </div>
+                        <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Beban Penyusutan</h6>
+                            <h4 class="card-title mb-0">@FormatCurrencyShort(Math.Abs(GrandTotal.BebanPenyusutan))</h4>
+                        </div>
+                        <i class="bi bi-graph-down-arrow fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Akumulasi Penyusutan</h6>
+                            <h4 class="card-title mb-0">@FormatCurrencyShort(Math.Abs(GrandTotal.AkumulasiPenyusutan))</h4>
+                        </div>
+                        <i class="bi bi-layers fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Nilai Buku</h6>
+                            <h4 class="card-title mb-0">@FormatCurrencyShort(GrandTotal.NilaiBuku)</h4>
+                        </div>
+                        <i class="bi bi-journal-bookmark fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int TahunAnggaran = DateTime.Now.Year;
+    private List<RekapitulasiItem> DataRekapitulasi = new();
+    private RekapitulasiItem GrandTotal = new();
+
+    protected override void OnInitialized()
+    {
+        // Sample data based on the Excel file
+        DataRekapitulasi = new List<RekapitulasiItem>
+        {
+            new() { JenisAset = "INTRAKOMPTABEL", Level = 0, NilaiPerolehan = 3820924172857.63m, BebanPenyusutan = -146278349503.49m, AkumulasiPenyusutan = -1616122280250.89m, NilaiBuku = 2204801892606.73m },
+            new() { JenisAset = "Aset Tetap", Level = 1, NilaiPerolehan = 3708025030377.58m, BebanPenyusutan = -146278349503.49m, AkumulasiPenyusutan = -1538854717422.75m, NilaiBuku = 2169170312954.83m },
+            new() { JenisAset = "Tanah", Level = 2, NilaiPerolehan = 246374532142.00m, BebanPenyusutan = 0, AkumulasiPenyusutan = 0, NilaiBuku = 246374532142.00m },
+            new() { JenisAset = "Peralatan dan Mesin", Level = 2, NilaiPerolehan = 441417345191.22m, BebanPenyusutan = -39642416830.18m, AkumulasiPenyusutan = -370976822394.83m, NilaiBuku = 70440522796.38m },
+            new() { JenisAset = "Gedung dan Bangunan", Level = 2, NilaiPerolehan = 897882554958.07m, BebanPenyusutan = -18323574102.00m, AkumulasiPenyusutan = -179096297050.00m, NilaiBuku = 718786257908.07m },
+            new() { JenisAset = "Jalan, Irigasi dan Jaringan", Level = 2, NilaiPerolehan = 1944558438037.15m, BebanPenyusutan = -88312358571.31m, AkumulasiPenyusutan = -988781597977.92m, NilaiBuku = 955776840059.22m },
+            new() { JenisAset = "Aset Tetap Lainnya", Level = 2, NilaiPerolehan = 142765884788.03m, BebanPenyusutan = 0, AkumulasiPenyusutan = 0, NilaiBuku = 142765884788.03m },
+            new() { JenisAset = "Konstruksi Dalam Pengerjaan", Level = 2, NilaiPerolehan = 35026275261.12m, BebanPenyusutan = 0, AkumulasiPenyusutan = 0, NilaiBuku = 35026275261.12m },
+            new() { JenisAset = "Aset Lainnya", Level = 1, NilaiPerolehan = 112899142480.04m, BebanPenyusutan = 0, AkumulasiPenyusutan = -77267562828.14m, NilaiBuku = 35631579651.90m },
+            new() { JenisAset = "EKSTRAKOMPTABEL", Level = 0, NilaiPerolehan = 79129420043.63m, BebanPenyusutan = -4016135327.23m, AkumulasiPenyusutan = -66482936843.62m, NilaiBuku = 12646483200.00m },
+            new() { JenisAset = "Aset Tetap", Level = 1, NilaiPerolehan = 61882856615.05m, BebanPenyusutan = -4016135327.23m, AkumulasiPenyusutan = -49897527995.54m, NilaiBuku = 11985328619.50m },
+            new() { JenisAset = "Peralatan dan Mesin", Level = 2, NilaiPerolehan = 52975491946.55m, BebanPenyusutan = -3750356042.23m, AkumulasiPenyusutan = -45735748521.54m, NilaiBuku = 7239743425.00m },
+            new() { JenisAset = "Gedung dan Bangunan", Level = 2, NilaiPerolehan = 8907364668.50m, BebanPenyusutan = -265779285.00m, AkumulasiPenyusutan = -4161779474.00m, NilaiBuku = 4745585194.50m },
+            new() { JenisAset = "Aset Lainnya", Level = 1, NilaiPerolehan = 17246563428.58m, BebanPenyusutan = 0, AkumulasiPenyusutan = -16585408848.08m, NilaiBuku = 661154580.50m },
+        };
+
+        GrandTotal = new RekapitulasiItem
+        {
+            JenisAset = "GRAND TOTAL",
+            NilaiPerolehan = 3900053592901.25m,
+            BebanPenyusutan = -150294484830.72m,
+            AkumulasiPenyusutan = -1682605217094.52m,
+            NilaiBuku = 2217448375806.73m
+        };
+    }
+
+    private string FormatCurrency(decimal value)
+    {
+        if (value == 0) return "-";
+        return value.ToString("N0", new System.Globalization.CultureInfo("id-ID"));
+    }
+
+    private string FormatCurrencyShort(decimal value)
+    {
+        if (value >= 1_000_000_000_000)
+            return $"Rp {(value / 1_000_000_000_000):N2} T";
+        if (value >= 1_000_000_000)
+            return $"Rp {(value / 1_000_000_000):N2} M";
+        if (value >= 1_000_000)
+            return $"Rp {(value / 1_000_000):N2} Jt";
+        return $"Rp {value:N0}";
+    }
+
+    private void ExportExcel()
+    {
+        // TODO: Implement Excel export
+    }
+
+    private void PrintReport()
+    {
+        // TODO: Implement print functionality
+    }
+
+    private class RekapitulasiItem
+    {
+        public string JenisAset { get; set; } = "";
+        public int Level { get; set; }
+        public decimal NilaiPerolehan { get; set; }
+        public decimal BebanPenyusutan { get; set; }
+        public decimal AkumulasiPenyusutan { get; set; }
+        public decimal NilaiBuku { get; set; }
+    }
+}

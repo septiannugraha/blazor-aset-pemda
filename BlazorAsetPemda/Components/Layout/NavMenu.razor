@@ -1,67 +1,176 @@
-﻿@implements IDisposable
+@rendermode InteractiveServer
+@implements IDisposable
 
 @inject NavigationManager NavigationManager
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">BlazorAsetPemda</a>
-    </div>
+<div class="sidebar-header">
+    <a class="navbar-brand d-flex flex-column align-items-center text-center" href="">
+        <img src="/images/logo.png" alt="Logo" class="sidebar-logo" />
+        <div class="brand-text">
+            <small class="pemda-name d-block">PEMERINTAH KABUPATEN</small>
+            <small class="pemda-name d-block">LABUHANBATU SELATAN</small>
+            <span class="app-name">SIAP BMD</span>
+            <span class="tahun-anggaran">TA @DateTime.Now.Year</span>
+        </div>
+    </a>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox" title="Menu navigasi" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
+        @* Dashboard *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-speedometer2" aria-hidden="true"></span> Dashboard
             </NavLink>
         </div>
 
+        @* Administrasi - Collapsible *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
+            <a class="nav-link" data-bs-toggle="collapse" href="#administrasiMenu" role="button"
+               aria-expanded="@(IsAdministrasiExpanded ? "true" : "false")" @onclick="ToggleAdministrasi">
+                <span class="bi bi-folder" aria-hidden="true"></span> Administrasi
+                <span class="bi @(IsAdministrasiExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsAdministrasiExpanded ? "show" : "")" id="administrasiMenu">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="data-umum">
+                            <span class="bi bi-database" aria-hidden="true"></span> Data Umum
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="skpd">
+                            <span class="bi bi-building" aria-hidden="true"></span> SKPD
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="upb">
+                            <span class="bi bi-diagram-3" aria-hidden="true"></span> UPB
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="kode-barang">
+                            <span class="bi bi-upc-scan" aria-hidden="true"></span> Kode Barang
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="kode-rekening">
+                            <span class="bi bi-journal-text" aria-hidden="true"></span> Kode Rekening
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="assets">
+                            <span class="bi bi-box-seam" aria-hidden="true"></span> Aset
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="import">
+                            <span class="bi bi-upload" aria-hidden="true"></span> Import Data
+                        </NavLink>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        @* Penyusutan *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
+            <a class="nav-link" data-bs-toggle="collapse" href="#penyusutanMenu" role="button"
+               aria-expanded="@(IsPenyusutanExpanded ? "true" : "false")" @onclick="TogglePenyusutan">
+                <span class="bi bi-graph-down" aria-hidden="true"></span> Penyusutan
+                <span class="bi @(IsPenyusutanExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsPenyusutanExpanded ? "show" : "")" id="penyusutanMenu">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="penyusutan/perhitungan">
+                            <span class="bi bi-calculator" aria-hidden="true"></span> Perhitungan
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="penyusutan/rekap">
+                            <span class="bi bi-table" aria-hidden="true"></span> Rekapitulasi
+                        </NavLink>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        @* Pelaporan *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
-            </NavLink>
+            <a class="nav-link" data-bs-toggle="collapse" href="#pelaporanMenu" role="button"
+               aria-expanded="@(IsPelaporanExpanded ? "true" : "false")" @onclick="TogglePelaporan">
+                <span class="bi bi-file-earmark-bar-graph" aria-hidden="true"></span> Pelaporan
+                <span class="bi @(IsPelaporanExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+            </a>
+            <div class="collapse @(IsPelaporanExpanded ? "show" : "")" id="pelaporanMenu">
+                <div class="nav-submenu ps-3">
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="laporan/kib">
+                            <span class="bi bi-file-text" aria-hidden="true"></span> Laporan KIB
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="laporan/bmd">
+                            <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Laporan BMD
+                        </NavLink>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        @* Admin Menu - Only for Pengelola Barang *@
+        <AuthorizeView Roles="PengelolaBarang,Admin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <a class="nav-link" data-bs-toggle="collapse" href="#adminMenu" role="button"
+                       aria-expanded="@(IsAdminExpanded ? "true" : "false")" @onclick="ToggleAdmin">
+                        <span class="bi bi-gear" aria-hidden="true"></span> Admin
+                        <span class="bi @(IsAdminExpanded ? "bi-chevron-down" : "bi-chevron-right") float-end small"></span>
+                    </a>
+                    <div class="collapse @(IsAdminExpanded ? "show" : "")" id="adminMenu">
+                        <div class="nav-submenu ps-3">
+                            <div class="nav-item">
+                                <NavLink class="nav-link" href="admin/pengguna">
+                                    <span class="bi bi-people" aria-hidden="true"></span> Pengguna
+                                </NavLink>
+                            </div>
+                            <div class="nav-item">
+                                <NavLink class="nav-link" href="admin/kebijakan">
+                                    <span class="bi bi-sliders" aria-hidden="true"></span> Kebijakan Akuntansi
+                                </NavLink>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <hr class="mx-3 my-2" style="border-color: rgba(255,255,255,0.2);" />
+
+        @* User Info & Logout *@
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                        <span class="bi bi-person-circle" aria-hidden="true"></span> @context.User.Identity?.Name
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                        <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start">
+                            <span class="bi bi-box-arrow-left" aria-hidden="true"></span> Keluar
                         </button>
                     </form>
                 </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Masuk
                     </NavLink>
                 </div>
             </NotAuthorized>
@@ -69,24 +178,127 @@
     </nav>
 </div>
 
+<style>
+    .sidebar-header {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+        padding: 20px 15px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-header .navbar-brand {
+        color: white;
+        text-decoration: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .sidebar-logo {
+        width: 70px;
+        height: auto;
+        margin-bottom: 10px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    .brand-text {
+        line-height: 1.3;
+    }
+
+    .brand-text .pemda-name {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.85);
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+
+    .brand-text .app-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffd700;
+        display: block;
+        margin-top: 5px;
+    }
+
+    .brand-text .tahun-anggaran {
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        display: block;
+        margin-top: 8px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+    }
+
+    .nav-submenu {
+        border-left: 2px solid rgba(255, 255, 255, 0.2);
+        margin-left: 10px;
+    }
+
+    .nav-submenu .nav-link {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    .nav-submenu .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+    }
+</style>
+
 @code {
     private string? currentUrl;
+    private bool IsAdministrasiExpanded = false;
+    private bool IsPenyusutanExpanded = false;
+    private bool IsPelaporanExpanded = false;
+    private bool IsAdminExpanded = false;
 
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        // Auto-expand menu based on current URL
+        ExpandMenuBasedOnUrl(currentUrl);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        ExpandMenuBasedOnUrl(currentUrl);
         StateHasChanged();
     }
+
+    private void ExpandMenuBasedOnUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+
+        if (url.StartsWith("data-umum") || url.StartsWith("skpd") || url.StartsWith("upb") ||
+            url.StartsWith("kode-") || url.StartsWith("assets") || url.StartsWith("import"))
+        {
+            IsAdministrasiExpanded = true;
+        }
+        else if (url.StartsWith("penyusutan"))
+        {
+            IsPenyusutanExpanded = true;
+        }
+        else if (url.StartsWith("laporan"))
+        {
+            IsPelaporanExpanded = true;
+        }
+        else if (url.StartsWith("admin"))
+        {
+            IsAdminExpanded = true;
+        }
+    }
+
+    private void ToggleAdministrasi() => IsAdministrasiExpanded = !IsAdministrasiExpanded;
+    private void TogglePenyusutan() => IsPenyusutanExpanded = !IsPenyusutanExpanded;
+    private void TogglePelaporan() => IsPelaporanExpanded = !IsPelaporanExpanded;
+    private void ToggleAdmin() => IsAdminExpanded = !IsAdminExpanded;
 
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
-
