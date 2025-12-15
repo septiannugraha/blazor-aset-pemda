@@ -4,6 +4,7 @@ using BlazorAsetPemda.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorAsetPemda.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251215040155_AddImportFileSupport")]
+    partial class AddImportFileSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -862,75 +865,6 @@ namespace BlazorAsetPemda.Migrations
                     b.ToTable("Kontraks");
                 });
 
-            modelBuilder.Entity("BlazorAsetPemda.Data.Models.RefPenyusutan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("KIBType")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Kelompok")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Keterangan")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("KodeBarang")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("KodeBarangMasterId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MasaManfaat")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MasaManfaatBulan")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MetodePenyusutan")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NamaBarang")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<decimal?>("NilaiResidu")
-                        .HasColumnType("decimal(10,4)");
-
-                    b.Property<decimal?>("PersenPenyusutan")
-                        .HasColumnType("decimal(10,4)");
-
-                    b.Property<int?>("TahunReferensi")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("KodeBarang");
-
-                    b.HasIndex("KodeBarangMasterId");
-
-                    b.ToTable("RefPenyusutans");
-                });
-
             modelBuilder.Entity("BlazorAsetPemda.Data.Models.SKPD", b =>
                 {
                     b.Property<int>("Id")
@@ -1231,16 +1165,6 @@ namespace BlazorAsetPemda.Migrations
                         .IsRequired();
 
                     b.Navigation("SKPD");
-                });
-
-            modelBuilder.Entity("BlazorAsetPemda.Data.Models.RefPenyusutan", b =>
-                {
-                    b.HasOne("BlazorAsetPemda.Data.Models.KodeBarang", "KodeBarangMaster")
-                        .WithMany()
-                        .HasForeignKey("KodeBarangMasterId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("KodeBarangMaster");
                 });
 
             modelBuilder.Entity("BlazorAsetPemda.Data.Models.UPB", b =>

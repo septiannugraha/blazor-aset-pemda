@@ -1,0 +1,25 @@
+version: '3.8'
+
+# Use this compose file when connecting to an external SQL Server (e.g., existing 2008 R2)
+# Usage: docker-compose -f docker-compose.external.yml up -d
+#
+# Required environment variables in .env:
+#   EXTERNAL_SQL_SERVER=31.220.73.89,14308
+#   EXTERNAL_SQL_DATABASE=BlazorAsetPemdaDb
+#   EXTERNAL_SQL_USER=sa
+#   EXTERNAL_SQL_PASSWORD=YourPassword
+
+services:
+  # Blazor BMD Application (connects to external SQL Server)
+  blazor-app:
+    build:
+      context: ./BlazorAsetPemda
+      dockerfile: Dockerfile
+    container_name: bmd-app-external
+    environment:
+      # NOTE: Encrypt=False is required for SQL Server 2008 R2 (doesn't support TLS 1.2)
+      - ConnectionStrings__DefaultConnection=Server=${EXTERNAL_SQL_SERVER};Database=${EXTERNAL_SQL_DATABASE:-BlazorAsetPemdaDb};User Id=${EXTERNAL_SQL_USER:-sa};Password=${EXTERNAL_SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "5001:80"
+    restart: unless-stopped

@@ -113,4 +113,38 @@ public class KodeBarangService
 
         return true;
     }
+
+    public async Task<int> GetCountAsync(string? searchTerm = null)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.KodeBarangs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(k =>
+                k.KodeBarang1.Contains(searchTerm) ||
+                k.NamaBarang.Contains(searchTerm));
+        }
+
+        return await query.CountAsync();
+    }
+
+    public async Task<List<KodeBarang>> GetPagedAsync(int page, int pageSize, string? searchTerm = null)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.KodeBarangs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(k =>
+                k.KodeBarang1.Contains(searchTerm) ||
+                k.NamaBarang.Contains(searchTerm));
+        }
+
+        return await query
+            .OrderBy(k => k.KodeBarang1)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
 }

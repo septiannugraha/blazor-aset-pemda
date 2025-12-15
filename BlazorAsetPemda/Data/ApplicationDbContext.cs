@@ -13,9 +13,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<KodeRekeningBMD> KodeRekeningBMDs { get; set; }
     public DbSet<Asset> Assets { get; set; }
     public DbSet<AssetImportData> AssetImportDatas { get; set; }
+    public DbSet<ImportFile> ImportFiles { get; set; }
     public DbSet<Kontrak> Kontraks { get; set; }
     public DbSet<Depreciation> Depreciations { get; set; }
     public DbSet<KebijakanAkuntansi> KebijakanAkuntansis { get; set; }
+    public DbSet<RefPenyusutan> RefPenyusutans { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -134,5 +136,34 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<Depreciation>()
             .HasIndex(d => new { d.AssetId, d.Tahun, d.Bulan });
+
+        // ImportFile relationships
+        modelBuilder.Entity<AssetImportData>()
+            .HasOne(a => a.ImportFile)
+            .WithMany()
+            .HasForeignKey(a => a.ImportFileId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ImportFile>()
+            .HasIndex(i => i.BatchId);
+
+        modelBuilder.Entity<ImportFile>()
+            .HasIndex(i => i.ImportType);
+
+        modelBuilder.Entity<AssetImportData>()
+            .HasIndex(a => a.ImportFileId);
+
+        modelBuilder.Entity<AssetImportData>()
+            .HasIndex(a => a.VerificationStatus);
+
+        // RefPenyusutan configuration
+        modelBuilder.Entity<RefPenyusutan>()
+            .HasIndex(r => r.KodeBarang);
+
+        modelBuilder.Entity<RefPenyusutan>()
+            .HasOne(r => r.KodeBarangMaster)
+            .WithMany()
+            .HasForeignKey(r => r.KodeBarangMasterId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

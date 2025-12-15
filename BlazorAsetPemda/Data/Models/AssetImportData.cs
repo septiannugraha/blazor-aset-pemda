@@ -272,6 +272,12 @@ public class AssetImportData
     public Guid? ImportBatchId { get; set; }
 
     /// <summary>
+    /// Foreign key to ImportFile
+    /// </summary>
+    public int? ImportFileId { get; set; }
+    public virtual ImportFile? ImportFile { get; set; }
+
+    /// <summary>
     /// Source file name
     /// </summary>
     [MaxLength(255)]
@@ -294,8 +300,19 @@ public class AssetImportData
     public bool IsProcessed { get; set; } = false;
 
     /// <summary>
+    /// Verification status: Pending, Valid, Invalid
+    /// </summary>
+    [MaxLength(20)]
+    public string VerificationStatus { get; set; } = "Pending";
+
+    /// <summary>
     /// Validation errors (if any)
     /// </summary>
     [MaxLength(2000)]
     public string? ValidationErrors { get; set; }
+
+    /// <summary>
+    /// Row number in original Excel file
+    /// </summary>
+    public int? RowNumber { get; set; }
 }

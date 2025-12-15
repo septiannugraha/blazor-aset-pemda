@@ -31,8 +31,9 @@ public class AssetDataImportService
     /// <param name="filePath">Path to the Excel file</param>
     /// <param name="sheetName">Sheet name to import (default: "Input Data")</param>
     /// <param name="importedBy">User who is importing the data</param>
+    /// <param name="importFileId">Optional ImportFile ID for tracking</param>
     /// <returns>Import result with success count and errors</returns>
-    public async Task<ImportResult> ImportFromExcelAsync(string filePath, string sheetName = "Input Data", string? importedBy = null)
+    public async Task<ImportResult> ImportFromExcelAsync(string filePath, string sheetName = "Input Data", string? importedBy = null, int? importFileId = null)
     {
         var result = new ImportResult();
         var importBatchId = Guid.NewGuid();
@@ -139,10 +140,13 @@ public class AssetDataImportService
 
                         // Metadata
                         ImportBatchId = importBatchId,
+                        ImportFileId = importFileId,
                         SourceFileName = Path.GetFileName(filePath),
                         ImportedAt = DateTime.UtcNow,
                         ImportedBy = importedBy,
-                        IsProcessed = false
+                        IsProcessed = false,
+                        VerificationStatus = "Pending",
+                        RowNumber = rowNumber
                     };
 
                     _context.AssetImportDatas.Add(assetData);
@@ -250,6 +254,74 @@ public class AssetDataImportService
         if (DateTime.TryParse(value.ToString(), out DateTime result)) return result;
 
         return null;
+    }
+
+    /// <summary>
+    /// Preview Excel file data without importing (for display purposes)
+    /// </summary>
+    public List<AssetImportData> PreviewExcel(string filePath, string sheetName = "Input Data", int maxRows = 50)
+    {
+        var result = new List<AssetImportData>();
+
+        try
+        {
+            using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read);
+            using var reader = ExcelDataReader.ExcelReaderFactory.CreateReader(stream);
+
+            // Find the sheet
+            bool sheetFound = false;
+            do
+            {
+                if (reader.Name.Contains(sheetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    sheetFound = true;
+                    break;
+                }
+            } while (reader.NextResult());
+
+            if (!sheetFound) return result;
+
+            // Skip to row 10 (headers)
+            for (int i = 0; i < 9; i++)
+            {
+                if (!reader.Read()) return result;
+            }
+
+            // Read header row
+            if (!reader.Read()) return result;
+
+            // Read data rows
+            int rowNumber = 11;
+            while (reader.Read() && result.Count < maxRows)
+            {
+                if (IsEmptyRow(reader))
+                {
+                    rowNumber++;
+                    continue;
+                }
+
+                var data = new AssetImportData
+                {
+                    RowNumber = rowNumber,
+                    Kd_UPB = GetStringValue(reader, 1),
+                    Nm_UPB = GetStringValue(reader, 2),
+                    Kode_Barang = GetStringValue(reader, 6),
+                    Nm_Barang = GetStringValue(reader, 7),
+                    Tgl_Perolehan = GetDateValue(reader, 11),
+                    Harga = GetDecimalValue(reader, 18),
+                    Kon_b = GetStringValue(reader, 16)
+                };
+
+                result.Add(data);
+                rowNumber++;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error previewing Excel file");
+        }
+
+        return result;
     }
 
     /// <summary>

@@ -183,11 +183,155 @@ public class BMDReferenceImportService
     }
 
     /// <summary>
+    /// Import Kode Barang from Excel file (SEMUA KODE sheet)
+    /// </summary>
+    /// <param name="filePath">Path to the Permendagri Excel file</param>
+    /// <param name="sheetName">Sheet name to import (default: "SEMUA KODE")</param>
+    /// <returns>Import result with success count and errors</returns>
+    public async Task<ImportResult> ImportKodeBarangAsync(string filePath, string sheetName = "SEMUA KODE")
+    {
+        var result = new ImportResult();
+
+        try
+        {
+            // Set EPPlus license
+            ExcelPackage.License.SetNonCommercialPersonal("BlazorAsetPemda");
+
+            using var package = new ExcelPackage(new FileInfo(filePath));
+            var worksheet = package.Workbook.Worksheets[sheetName];
+
+            if (worksheet == null)
+            {
+                result.Errors.Add($"Sheet '{sheetName}' not found in the Excel file");
+                return result;
+            }
+
+            if (worksheet.Dimension == null)
+            {
+                result.Errors.Add($"Sheet '{sheetName}' is empty");
+                return result;
+            }
+
+            // Start from row 6 (data starts at row 6)
+            for (int row = 6; row <= worksheet.Dimension.End.Row; row++)
+            {
+                try
+                {
+                    var akun = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
+                    var kelompok = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                    var jenis = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
+                    var objek = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                    var rincianObjek = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
+                    var subRincianObjek = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+                    var subSubRincianObjek = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
+                    var uraian = worksheet.Cells[row, 8].Value?.ToString()?.Trim();
+
+                    // Skip if no description or not at the lowest level (subSubRincianObjek)
+                    // KodeBarang should be the most detailed level
+                    if (string.IsNullOrWhiteSpace(uraian) ||
+                        string.IsNullOrWhiteSpace(subSubRincianObjek))
+                    {
+                        continue;
+                    }
+
+                    // Build the full code in format xx.xx.xx.xx.xx.xx.xx
+                    var codeParts = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(akun)) codeParts.Add(akun);
+                    if (!string.IsNullOrWhiteSpace(kelompok)) codeParts.Add(kelompok);
+                    if (!string.IsNullOrWhiteSpace(jenis)) codeParts.Add(jenis);
+                    if (!string.IsNullOrWhiteSpace(objek)) codeParts.Add(objek);
+                    if (!string.IsNullOrWhiteSpace(rincianObjek)) codeParts.Add(rincianObjek);
+                    if (!string.IsNullOrWhiteSpace(subRincianObjek)) codeParts.Add(subRincianObjek);
+                    if (!string.IsNullOrWhiteSpace(subSubRincianObjek)) codeParts.Add(subSubRincianObjek);
+
+                    var kodeBarang = string.Join(".", codeParts);
+
+                    if (string.IsNullOrWhiteSpace(kodeBarang))
+                    {
+                        continue;
+                    }
+
+                    // Determine KIB type from Jenis level
+                    var kibType = jenis switch
+                    {
+                        "1" => Data.Enums.KIBType.A,  // Tanah
+                        "2" => Data.Enums.KIBType.B,  // Peralatan dan Mesin
+                        "3" => Data.Enums.KIBType.C,  // Gedung dan Bangunan
+                        "4" => Data.Enums.KIBType.D,  // Jalan, Jaringan dan Irigasi
+                        "5" => Data.Enums.KIBType.E,  // Aset Tetap Lainnya
+                        "6" => Data.Enums.KIBType.F,  // Konstruksi Dalam Pengerjaan
+                        _ => Data.Enums.KIBType.B     // Default to B
+                    };
+
+                    // Check if record already exists
+                    var existing = await _context.KodeBarangs
+                        .FirstOrDefaultAsync(k => k.KodeBarang1 == kodeBarang);
+
+                    if (existing != null)
+                    {
+                        // Update existing record
+                        existing.NamaBarang = uraian ?? "";
+                        existing.KIBType = kibType;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        result.UpdatedCount++;
+                    }
+                    else
+                    {
+                        // Create new record
+                        var newKodeBarang = new KodeBarang
+                        {
+                            KodeBarang1 = kodeBarang,
+                            NamaBarang = uraian ?? "",
+                            KIBType = kibType,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.KodeBarangs.Add(newKodeBarang);
+                        result.SuccessCount++;
+                    }
+
+                    // Save every 100 rows to avoid memory issues
+                    if ((result.SuccessCount + result.UpdatedCount) % 100 == 0)
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.Errors.Add($"Row {row}: {ex.Message}");
+                    _logger.LogError(ex, "Error importing KodeBarang row {Row}", row);
+                }
+            }
+
+            // Save any remaining changes
+            await _context.SaveChangesAsync();
+
+            result.IsSuccess = result.Errors.Count == 0 || (result.SuccessCount + result.UpdatedCount) > 0;
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add($"General error: {ex.Message}");
+            _logger.LogError(ex, "Error importing KodeBarang");
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Get total count of BMD reference codes in database
     /// </summary>
     public async Task<int> GetTotalCountAsync()
     {
         return await _context.KodeRekeningBMDs.CountAsync();
+    }
+
+    /// <summary>
+    /// Get total count of Kode Barang in database
+    /// </summary>
+    public async Task<int> GetKodeBarangCountAsync()
+    {
+        return await _context.KodeBarangs.CountAsync();
     }
 
     /// <summary>

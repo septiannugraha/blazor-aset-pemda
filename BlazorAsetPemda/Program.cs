@@ -83,6 +83,8 @@ public class Program
         builder.Services.AddScoped<KodeRekeningService>();
         builder.Services.AddScoped<BMDReferenceImportService>();
         builder.Services.AddScoped<AssetDataImportService>();
+        builder.Services.AddScoped<FileImportService>();
+        builder.Services.AddScoped<RefPenyusutanImportService>();
 
         var app = builder.Build();
 

@@ -2,6 +2,10 @@
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "PengelolaBarang")]
 @layout PengelolaBarangLayout
+@inject BMDReferenceImportService ImportService
+@inject KodeBarangService KodeBarangService
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JS
 
 <PageTitle>Kode Barang</PageTitle>
 
@@ -11,19 +15,204 @@
             <h1 class="h3 mb-0">Kode Barang</h1>
             <p class="text-muted">Kelola master kode barang milik daerah</p>
         </div>
-        <div class="col-auto">
+        <div class="col-auto d-flex gap-2">
+            <button class="btn btn-success" @onclick="ImportFromPermendagri" disabled="@isImporting">
+                @if (isImporting)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                    <span>Mengimpor...</span>
+                }
+                else
+                {
+                    <i class="bi bi-cloud-download me-1"></i>
+                    <span>Import Permendagri</span>
+                }
+            </button>
             <button class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Tambah Kode Barang
+                <i class="bi bi-plus-circle me-1"></i> Tambah
             </button>
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            <i class="bi @(isError ? "bi-exclamation-triangle" : "bi-check-circle") me-2"></i>
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+        </div>
+    }
+
     <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bi bi-tag display-1 text-muted"></i>
-            <h3 class="mt-3">Halaman Dalam Pengembangan</h3>
-            <p class="text-muted">Fitur kode barang akan tersedia segera</p>
-            <p class="small text-muted">Halaman ini akan menampilkan form dan daftar master kode barang berdasarkan klasifikasi aset</p>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-list me-2"></i>Daftar Kode Barang</span>
+            <span class="badge bg-primary">@totalCount item</span>
+        </div>
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (kodeBarangList.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h5 class="mt-3 text-muted">Belum ada data</h5>
+                    <p class="text-muted small">Klik "Import Permendagri" untuk mengimpor data dari file Excel</p>
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <input type="text" class="form-control" placeholder="Cari kode atau nama barang..."
+                           @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+                </div>
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-bordered table-striped table-hover mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th style="width: 50px;">No</th>
+                                <th style="width: 200px;">Kode Barang</th>
+                                <th>Nama Barang</th>
+                                <th style="width: 80px;">KIB</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var (item, index) in kodeBarangList.Select((x, i) => (x, i)))
+                            {
+                                <tr>
+                                    <td class="text-center">@(index + 1 + (currentPage - 1) * pageSize)</td>
+                                    <td><code>@item.KodeBarang1</code></td>
+                                    <td>@item.NamaBarang</td>
+                                    <td class="text-center"><span class="badge bg-secondary">@item.KIBType</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (totalCount > pageSize)
+                {
+                    <nav class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => LoadData(currentPage - 1)">Prev</button>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">Hal @currentPage / @totalPages</span>
+                            </li>
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => LoadData(currentPage + 1)">Next</button>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            }
         </div>
     </div>
 </div>
+
+@code {
+    private List<BlazorAsetPemda.Data.Models.KodeBarang> kodeBarangList = new();
+    private bool isLoading = true;
+    private bool isImporting = false;
+    private string? statusMessage;
+    private bool isError = false;
+    private int totalCount = 0;
+    private int currentPage = 1;
+    private int pageSize = 50;
+    private int totalPages => (int)Math.Ceiling((double)totalCount / pageSize);
+    private string searchTerm = "";
+    private System.Timers.Timer? searchTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData(1);
+    }
+
+    private async Task LoadData(int page)
+    {
+        isLoading = true;
+        currentPage = page;
+
+        try
+        {
+            totalCount = await KodeBarangService.GetCountAsync(searchTerm);
+            kodeBarangList = await KodeBarangService.GetPagedAsync(page, pageSize, searchTerm);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSearchKeyUp()
+    {
+        searchTimer?.Stop();
+        searchTimer?.Dispose();
+        searchTimer = new System.Timers.Timer(300);
+        searchTimer.Elapsed += async (s, e) =>
+        {
+            searchTimer?.Stop();
+            await InvokeAsync(async () =>
+            {
+                await LoadData(1);
+                StateHasChanged();
+            });
+        };
+        searchTimer.AutoReset = false;
+        searchTimer.Start();
+    }
+
+    private async Task ImportFromPermendagri()
+    {
+        isImporting = true;
+        statusMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // Path to Permendagri file
+            var filePath = Path.Combine(Environment.ContentRootPath, "..", "references",
+                "kode Permendagri Nomor 108 Tahun 2016 Lampiran 2.xlsx");
+
+            if (!File.Exists(filePath))
+            {
+                statusMessage = $"File tidak ditemukan: {filePath}";
+                isError = true;
+                return;
+            }
+
+            var result = await ImportService.ImportKodeBarangAsync(filePath, "SEMUA KODE");
+
+            if (result.IsSuccess)
+            {
+                statusMessage = $"Import berhasil! {result.SuccessCount} data baru, {result.UpdatedCount} data diperbarui.";
+                isError = false;
+                await LoadData(1);
+            }
+            else
+            {
+                statusMessage = $"Import gagal: {string.Join(", ", result.Errors.Take(3))}";
+                isError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        searchTimer?.Dispose();
+    }
+}

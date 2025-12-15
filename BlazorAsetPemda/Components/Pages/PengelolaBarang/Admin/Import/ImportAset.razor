@@ -1,0 +1,637 @@
+@page "/pengelola-barang/admin/import/aset"
+@layout BlazorAsetPemda.Components.Layout.PengelolaBarangLayout
+@using BlazorAsetPemda.Data
+@using BlazorAsetPemda.Data.Models
+@using BlazorAsetPemda.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Roles = "PengelolaBarang")]
+@inject FileImportService FileService
+@inject AssetDataImportService AssetImportService
+@inject ApplicationDbContext DbContext
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Import Data Aset</PageTitle>
+
+<div class="container-fluid">
+    <h3 class="mb-4">
+        <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+        Import Data Aset
+    </h3>
+
+    <!-- TOP ROW: File List (Left) + Metadata (Right) -->
+    <div class="row mb-3">
+        <!-- Left: File List -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                    <span><i class="bi bi-folder me-2"></i>Daftar File yang Diupload</span>
+                    <button class="btn btn-light btn-sm py-0" @onclick="RefreshFileList">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                <div class="card-body p-2">
+                    <div class="mb-2">
+                        <InputFile OnChange="OnFileSelected" class="form-control form-control-sm" accept=".xlsx,.xls" />
+                        @if (!string.IsNullOrEmpty(uploadMessage))
+                        {
+                            <small class="@(uploadSuccess ? "text-success" : "text-danger")">@uploadMessage</small>
+                        }
+                    </div>
+
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        @if (importFiles.Count == 0)
+                        {
+                            <div class="alert alert-info py-2 mb-0 small">
+                                <i class="bi bi-info-circle me-1"></i>Belum ada file yang diupload.
+                            </div>
+                        }
+                        else
+                        {
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Nama File</th>
+                                        <th>Status</th>
+                                        <th class="text-center" style="width: 80px;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var file in importFiles)
+                                    {
+                                        <tr class="@(selectedFileId == file.Id ? "table-active" : "")"
+                                            style="cursor: pointer;"
+                                            @onclick="() => SelectFile(file.Id)">
+                                            <td class="small">
+                                                <i class="bi bi-file-earmark-excel text-success me-1"></i>
+                                                @file.FileName
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetStatusBadgeClass(file.Status)" style="font-size: 0.7rem;">
+                                                    @file.Status
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-outline-danger btn-sm py-0 px-1"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => DeleteFile(file.Id)"
+                                                        title="Hapus">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: File Metadata -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white py-2">
+                    <i class="bi bi-info-circle me-2"></i>Detail File
+                </div>
+                <div class="card-body p-2">
+                    @if (selectedFile == null)
+                    {
+                        <div class="alert alert-secondary py-2 mb-0 small">
+                            <i class="bi bi-hand-index me-1"></i>Pilih file dari daftar untuk melihat detail.
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm mb-2">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted" style="width: 120px;">Nama File</td>
+                                    <td><strong>@selectedFile.FileName</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Ukuran</td>
+                                    <td>@FormatFileSize(selectedFile.FileSize)</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Diupload</td>
+                                    <td>@selectedFile.UploadedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Oleh</td>
+                                    <td>@(selectedFile.UploadedBy ?? "-")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Status</td>
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(selectedFile.Status)">@selectedFile.Status</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Total Rows</td>
+                                    <td>
+                                        @if (selectedFile.TotalRows > 0)
+                                        {
+                                            <span>@selectedFile.TotalRows</span>
+                                            <span class="text-muted ms-2">
+                                                (<span class="text-success">@selectedFile.ImportedRows imported</span>,
+                                                <span class="text-danger">@selectedFile.ErrorRows errors</span>)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="d-flex gap-2">
+                            @if (selectedFile.Status == ImportStatus.Pending)
+                            {
+                                <button class="btn btn-success btn-sm" @onclick="ImportToDatabase" disabled="@isImporting">
+                                    @if (isImporting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-database-add me-1"></i>Import ke Database
+                                </button>
+                            }
+                            @if (selectedFile.Status == ImportStatus.Imported)
+                            {
+                                <button class="btn btn-warning btn-sm" @onclick="VerifyData" disabled="@isVerifying">
+                                    @if (isVerifying)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-check2-all me-1"></i>Verifikasi
+                                </button>
+                            }
+                            @if (selectedFile.Status == ImportStatus.Verified)
+                            {
+                                <button class="btn btn-primary btn-sm" @onclick="FinalizeImport" disabled="@isFinalizing">
+                                    @if (isFinalizing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-check-circle me-1"></i>Finalisasi
+                                </button>
+                            }
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ExportToExcel">
+                                <i class="bi bi-download me-1"></i>Export
+                            </button>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(actionMessage))
+                        {
+                            <div class="alert @(actionSuccess ? "alert-success" : "alert-danger") py-1 mt-2 mb-0 small">
+                                @actionMessage
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM ROW: Excel Data (Left) + Database Data (Right) -->
+    <div class="row">
+        <!-- Left: Excel File Data -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white py-2">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Data dalam File Excel
+                </div>
+                <div class="card-body p-2">
+                    @if (selectedFile == null)
+                    {
+                        <div class="alert alert-secondary py-2 mb-0 small">
+                            <i class="bi bi-hand-index me-1"></i>Pilih file untuk melihat isi data Excel.
+                        </div>
+                    }
+                    else if (excelPreviewData.Count == 0)
+                    {
+                        <div class="alert alert-warning py-2 mb-0 small">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <span>Tidak dapat membaca file Excel atau file kosong.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered table-striped mb-0" style="font-size: 0.75rem;">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Kode Barang</th>
+                                        <th>Nama Barang</th>
+                                        <th>Tgl Perolehan</th>
+                                        <th class="text-end">Harga</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in excelPreviewData)
+                                    {
+                                        <tr>
+                                            <td>@row.RowNumber</td>
+                                            <td>@row.Kode_Barang</td>
+                                            <td class="text-truncate" style="max-width: 150px;">@row.Nm_Barang</td>
+                                            <td>@row.Tgl_Perolehan?.ToString("dd/MM/yy")</td>
+                                            <td class="text-end">@row.Harga?.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (excelPreviewData.Count >= 50)
+                        {
+                            <small class="text-muted">Menampilkan 50 baris pertama.</small>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Database Data -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-database me-2"></i>Data di Database (Hasil Import)</span>
+                    @if (importDataCount > 0)
+                    {
+                        <span class="badge bg-dark">@importDataCount rows</span>
+                    }
+                </div>
+                <div class="card-body p-2">
+                    @if (selectedFile == null)
+                    {
+                        <div class="alert alert-secondary py-2 mb-0 small">
+                            <i class="bi bi-hand-index me-1"></i>Pilih file untuk melihat hasil import.
+                        </div>
+                    }
+                    else if (importData.Count == 0)
+                    {
+                        <div class="alert alert-info py-2 mb-0 small">
+                            <i class="bi bi-info-circle me-1"></i>Belum ada data yang diimport dari file ini.
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Summary badges -->
+                        <div class="mb-2">
+                            <span class="badge bg-success me-1">Valid: @validCount</span>
+                            <span class="badge bg-danger me-1">Invalid: @invalidCount</span>
+                            <span class="badge bg-secondary">Pending: @pendingCount</span>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size: 0.75rem;">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Status</th>
+                                        <th>Kode Barang</th>
+                                        <th>Nama Barang</th>
+                                        <th class="text-end">Harga</th>
+                                        <th>Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var data in importData)
+                                    {
+                                        <tr class="@GetRowClass(data.VerificationStatus)">
+                                            <td>@data.RowNumber</td>
+                                            <td>
+                                                <span class="badge @GetVerificationBadgeClass(data.VerificationStatus)" style="font-size: 0.65rem;">
+                                                    @data.VerificationStatus
+                                                </span>
+                                            </td>
+                                            <td>@data.Kode_Barang</td>
+                                            <td class="text-truncate" style="max-width: 120px;">@data.Nm_Barang</td>
+                                            <td class="text-end">@data.Harga?.ToString("N0")</td>
+                                            <td class="text-danger small text-truncate" style="max-width: 100px;" title="@data.ValidationErrors">
+                                                @data.ValidationErrors
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        @if (totalPages > 1)
+                        {
+                            <nav class="mt-2">
+                                <ul class="pagination pagination-sm justify-content-center mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link py-0" @onclick="() => LoadImportData(currentPage - 1)">«</button>
+                                    </li>
+                                    @for (int i = 1; i <= Math.Min(totalPages, 5); i++)
+                                    {
+                                        var pageNum = i;
+                                        <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                            <button class="page-link py-0" @onclick="() => LoadImportData(pageNum)">@pageNum</button>
+                                        </li>
+                                    }
+                                    @if (totalPages > 5)
+                                    {
+                                        <li class="page-item disabled"><span class="page-link py-0">...</span></li>
+                                    }
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link py-0" @onclick="() => LoadImportData(currentPage + 1)">»</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+
+    private string? currentUserName;
+    private List<ImportFile> importFiles = new();
+    private int? selectedFileId;
+    private ImportFile? selectedFile;
+
+    // Upload state
+    private string? uploadMessage;
+    private bool uploadSuccess;
+
+    // Action state
+    private bool isImporting;
+    private bool isVerifying;
+    private bool isFinalizing;
+    private string? actionMessage;
+    private bool actionSuccess;
+
+    // Excel preview data
+    private List<AssetImportData> excelPreviewData = new();
+
+    // Import data state
+    private List<AssetImportData> importData = new();
+    private int importDataCount;
+    private int validCount;
+    private int invalidCount;
+    private int pendingCount;
+    private int currentPage = 1;
+    private int pageSize = 50;
+    private int totalPages => (int)Math.Ceiling((double)importDataCount / pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationStateTask != null)
+        {
+            var authState = await authenticationStateTask;
+            currentUserName = authState.User.Identity?.Name;
+        }
+
+        await RefreshFileList();
+    }
+
+    private async Task RefreshFileList()
+    {
+        importFiles = await FileService.GetFilesByTypeAsync(ImportTypes.Aset);
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+            var importFile = await FileService.SaveFileAsync(stream, file.Name, ImportTypes.Aset, currentUserName);
+
+            uploadSuccess = true;
+            uploadMessage = $"File '{file.Name}' berhasil diupload.";
+
+            await RefreshFileList();
+            await SelectFile(importFile.Id);
+        }
+        catch (Exception ex)
+        {
+            uploadSuccess = false;
+            uploadMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task SelectFile(int fileId)
+    {
+        selectedFileId = fileId;
+        selectedFile = await FileService.GetByIdAsync(fileId);
+        actionMessage = null;
+        excelPreviewData.Clear();
+
+        if (selectedFile != null)
+        {
+            // Always load Excel preview
+            var filePath = FileService.GetFilePath(selectedFile);
+            if (System.IO.File.Exists(filePath))
+            {
+                excelPreviewData = AssetImportService.PreviewExcel(filePath, "Input Data", 50);
+            }
+
+            // Load database data if already imported
+            if (selectedFile.Status != ImportStatus.Pending)
+            {
+                await LoadImportData(1);
+            }
+            else
+            {
+                importData.Clear();
+                importDataCount = 0;
+                validCount = 0;
+                invalidCount = 0;
+                pendingCount = 0;
+            }
+        }
+    }
+
+    private async Task DeleteFile(int fileId)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Hapus file ini dan semua data importnya?");
+        if (!confirmed) return;
+
+        var success = await FileService.DeleteFileAsync(fileId);
+        if (success)
+        {
+            if (selectedFileId == fileId)
+            {
+                selectedFileId = null;
+                selectedFile = null;
+                excelPreviewData.Clear();
+                importData.Clear();
+            }
+            await RefreshFileList();
+        }
+    }
+
+    private async Task ImportToDatabase()
+    {
+        if (selectedFile == null) return;
+
+        isImporting = true;
+        actionMessage = null;
+
+        try
+        {
+            var filePath = FileService.GetFilePath(selectedFile);
+            var result = await AssetImportService.ImportFromExcelAsync(filePath, "Input Data", currentUserName, selectedFile.Id);
+
+            if (result.IsSuccess)
+            {
+                actionSuccess = true;
+                actionMessage = $"Berhasil import {result.SuccessCount} baris.";
+
+                await FileService.UpdateStatusAsync(selectedFile.Id, ImportStatus.Imported, result.SuccessCount, result.Errors.Count);
+                selectedFile = await FileService.GetByIdAsync(selectedFile.Id);
+
+                await LoadImportData(1);
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = $"Import gagal: {string.Join(", ", result.Errors.Take(3))}";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    private async Task LoadImportData(int page)
+    {
+        if (selectedFile == null) return;
+
+        currentPage = page;
+        importData = await FileService.GetImportDataAsync(selectedFile.Id, page, pageSize);
+        importDataCount = await FileService.GetImportDataCountAsync(selectedFile.Id);
+
+        validCount = await DbContext.AssetImportDatas.CountAsync(a => a.ImportFileId == selectedFile.Id && a.VerificationStatus == "Valid");
+        invalidCount = await DbContext.AssetImportDatas.CountAsync(a => a.ImportFileId == selectedFile.Id && a.VerificationStatus == "Invalid");
+        pendingCount = await DbContext.AssetImportDatas.CountAsync(a => a.ImportFileId == selectedFile.Id && a.VerificationStatus == "Pending");
+
+        StateHasChanged();
+    }
+
+    private async Task VerifyData()
+    {
+        if (selectedFile == null) return;
+
+        isVerifying = true;
+        actionMessage = null;
+
+        try
+        {
+            var result = await FileService.VerifyImportDataAsync(selectedFile.Id);
+
+            actionSuccess = result.InvalidCount == 0;
+            actionMessage = $"Verifikasi selesai. Valid: {result.ValidCount}, Invalid: {result.InvalidCount}";
+
+            selectedFile = await FileService.GetByIdAsync(selectedFile.Id);
+            await LoadImportData(currentPage);
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isVerifying = false;
+        }
+    }
+
+    private async Task FinalizeImport()
+    {
+        if (selectedFile == null) return;
+
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Finalisasi import? Data akan dipindahkan ke tabel Asset.");
+        if (!confirmed) return;
+
+        isFinalizing = true;
+
+        try
+        {
+            var skpd = await DbContext.SKPDs.FirstOrDefaultAsync();
+            if (skpd == null)
+            {
+                actionMessage = "Error: Tidak ada SKPD terdaftar.";
+                actionSuccess = false;
+                return;
+            }
+
+            var count = await FileService.FinalizeImportAsync(selectedFile.Id, skpd.Id);
+
+            actionSuccess = true;
+            actionMessage = $"Berhasil finalisasi {count} data ke tabel Asset.";
+
+            selectedFile = await FileService.GetByIdAsync(selectedFile.Id);
+            await LoadImportData(currentPage);
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isFinalizing = false;
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        await JS.InvokeVoidAsync("alert", "Fitur export Excel akan segera tersedia.");
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        ImportStatus.Pending => "bg-secondary",
+        ImportStatus.Imported => "bg-info",
+        ImportStatus.Verified => "bg-warning text-dark",
+        ImportStatus.Completed => "bg-success",
+        ImportStatus.Failed => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetVerificationBadgeClass(string status) => status switch
+    {
+        "Valid" => "bg-success",
+        "Invalid" => "bg-danger",
+        "Pending" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    private string GetRowClass(string status) => status switch
+    {
+        "Invalid" => "table-danger",
+        "Valid" => "table-success",
+        _ => ""
+    };
+}
