@@ -160,6 +160,7 @@ $RECYCLE.BIN/
 # Sensitive files - exclude credentials and secrets
 appsettings.Development.json
 appsettings.Production.json
+appsettings.json
 *.pfx
 *.p12
 connectionstrings.config
@@ -277,3 +278,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+
+appsettings.json
